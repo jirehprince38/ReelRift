@@ -42,7 +42,7 @@ const TEMPLATES = {
   movie: {
     server1: "https://vsembed.ru/embed/movie?tmdb={TMDB_ID}",
     server2: "https://cinesrc.st/embed/movie/{TMDB_ID}",
-    server3: "https://multiembed.mov/directstream.php?video_id={TMDB_ID}&tmdb=1",
+    server3: "https://vidfast.vc/movie/{TMDB_ID}?autoPlay=true",
   },
   tv: {
     server1: "https://vsembed.ru/embed/tv/{TMDB_ID}/{SEASON}/{EPISODE}",
