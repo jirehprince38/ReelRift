@@ -96,32 +96,57 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const show = (el, on) => el.classList.toggle("hidden", !on);
-  const SESSION = "reelrift_admin_session";
 
-  /* ---------- auth (demo only) ---------- */
+  /* ---------- auth (server-side, HttpOnly cookie) ---------- */
   function setLogged(on) {
     show($("loginView"), !on);
     show($("panelView"), on);
     show($("logoutBtn"), on);
     if (on) renderTable();
   }
-  $("loginBtn").addEventListener("click", function () {
+
+  async function doLogin() {
     const u = $("user").value.trim(), p = $("pass").value;
-    if (u === "admin" && p === "admin123") {
-      sessionStorage.setItem(SESSION, "1");
-      show($("loginErr"), false);
-      setLogged(true);
-    } else {
-      $("loginErr").textContent = "Invalid username or password.";
+    $("loginBtn").disabled = true;
+    show($("loginErr"), false);
+    try {
+      const res = await fetch("/api/admin-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u, password: p }),
+      });
+      if (res.ok) {
+        setLogged(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        $("loginErr").textContent = data.error || "Invalid username or password.";
+        show($("loginErr"), true);
+      }
+    } catch (e) {
+      $("loginErr").textContent = "Network error. Please try again.";
       show($("loginErr"), true);
+    } finally {
+      $("loginBtn").disabled = false;
     }
-  });
-  $("pass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("loginBtn").click(); });
-  $("logoutBtn").addEventListener("click", function () {
-    sessionStorage.removeItem(SESSION);
+  }
+
+  $("loginBtn").addEventListener("click", doLogin);
+  $("pass").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  $("logoutBtn").addEventListener("click", async function () {
+    try { await fetch("/api/admin-logout", { method: "POST" }); } catch (e) {}
     setLogged(false);
   });
-  setLogged(sessionStorage.getItem(SESSION) === "1");
+
+  /* check existing session on load */
+  (async function () {
+    try {
+      const res = await fetch("/api/admin-session", { headers: { "Cache-Control": "no-store" } });
+      const data = await res.json().catch(() => ({}));
+      setLogged(!!data.loggedIn);
+    } catch (e) {
+      setLogged(false);
+    }
+  })();
 
   /* ---------- storage helpers ---------- */
   function readAll() {
@@ -164,11 +189,7 @@
     if (!q) { $("aErr").textContent = "Please enter a search query."; show($("aErr"), true); return; }
     $("aResults").innerHTML = '<div class="msg">Searching…</div>';
     try {
-      const url = "https://api.themoviedb.org/3/search/" + type + "?api_key=" + TMDB_API_KEY + "&query=" + encodeURIComponent(q);
-      const res = await fetch(url);
-      if (res.status === 401) throw new Error("Invalid TMDb API key.");
-      if (!res.ok) throw new Error("TMDb request failed (" + res.status + ").");
-      const data = await res.json();
+      const data = await tmdb("/search/" + type, { query: q });
       const items = data.results || [];
       if (!items.length) { $("aResults").innerHTML = '<div class="msg">No results found.</div>'; return; }
       $("aResults").innerHTML = items.map(function (i) {
@@ -204,7 +225,7 @@
   async function loadSeasons(id) {
     $("aSeason").innerHTML = "<option>…</option>";
     try {
-      const d = await (await fetch("https://api.themoviedb.org/3/tv/" + id + "?api_key=" + TMDB_API_KEY)).json();
+      const d = await tmdb("/tv/" + id, {});
       const seasons = (d.seasons || []).filter((s) => s.season_number > 0);
       const list = seasons.length ? seasons : [{ season_number: 1 }];
       $("aSeason").innerHTML = list.map((s) => '<option value="' + s.season_number + '">Season ' + s.season_number + "</option>").join("");
@@ -220,7 +241,7 @@
     $("aEpisode").innerHTML = "<option>…</option>";
     try {
       const s = $("aSeason").value;
-      const d = await (await fetch("https://api.themoviedb.org/3/tv/" + sel.id + "/season/" + s + "?api_key=" + TMDB_API_KEY)).json();
+      const d = await tmdb("/tv/" + sel.id + "/season/" + s, {});
       const eps = d.episodes || [];
       $("aEpisode").innerHTML = eps.length
         ? eps.map((e) => '<option value="' + e.episode_number + '">E' + e.episode_number + " · " + (e.name || "Episode " + e.episode_number).replace(/</g, "") + "</option>").join("")

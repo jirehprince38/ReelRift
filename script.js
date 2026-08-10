@@ -2,10 +2,10 @@
    ReelRift — pure JavaScript app
    ========================================================= */
 
-/* ---------- ONE configuration variable ---------- */
-const TMDB_API_KEY = "257654f35e3dff105574f97fb4b97035";
-
-const TMDB_BASE = "https://api.themoviedb.org/3";
+/* ---------- config ---------- */
+/* The TMDb API key now lives on the server. The browser only ever
+   talks to our own /api/tmdb proxy, so the key is never exposed. */
+const TMDB_PROXY = "/api/tmdb";
 const IMG = "https://image.tmdb.org/t/p/w500";
 const IMG_SM = "https://image.tmdb.org/t/p/w300";
 const IMG_BD = "https://image.tmdb.org/t/p/original";
@@ -81,8 +81,8 @@ function buildServers(type, id, season, episode) {
 
 /* ---------- TMDb fetch ---------- */
 async function tmdb(path, params) {
-  const url = new URL(TMDB_BASE + path);
-  url.searchParams.set("api_key", TMDB_API_KEY);
+  const url = new URL(TMDB_PROXY, location.origin);
+  url.searchParams.set("path", path);
   Object.keys(params || {}).forEach(function (k) {
     url.searchParams.set(k, params[k]);
   });
@@ -155,16 +155,73 @@ if (app) app.addEventListener("click", function (e) {
 });
 
 /* ---------- pages ---------- */
+/* ---------- home sub-sections ---------- */
+function aboutHTML() {
+  return (
+    '<section class="section about fade"><div class="about-card">' +
+    "<h2>What is ReelRift?</h2>" +
+    "<p>ReelRift is a modern streaming interface for discovering and watching popular movies and TV series. " +
+    "Browse what's trending, search for anything you like, and start watching instantly with multiple playback " +
+    "servers — all in one clean, fast, dark-themed experience. No account or payment required.</p>" +
+    "</div></section>"
+  );
+}
+
+function faqHTML() {
+  const faqs = [
+    { q: "Is ReelRift free to use?", a: "Yes. ReelRift is completely free to browse and stream. No account or payment is required." },
+    { q: "Where does the content come from?", a: "Title details and posters come from TMDb. Playback is provided through third-party streaming servers." },
+    { q: "What if a title won't play?", a: "Try switching to a different server using the server buttons on the watch page. Some titles may be temporarily unavailable or not released for streaming yet." },
+    { q: "Do I need to sign up?", a: "No sign up is needed. Just search or browse and press Watch now." },
+  ];
+  const items = faqs
+    .map(function (f) {
+      return '<details class="faq-item"><summary>' + esc(f.q) + "</summary><p>" + esc(f.a) + "</p></details>";
+    })
+    .join("");
+  return '<section class="section faq fade"><div class="section-head"><h2>Frequently Asked Questions</h2></div>' + items + "</section>";
+}
+
+function homeSearchHTML() {
+  return (
+    '<section class="section home-search fade"><div class="hs-card">' +
+    "<h2>Find something to watch</h2>" +
+    '<div class="hs-row">' +
+    '<input id="homeSearchInput" type="search" placeholder="Search movies or TV series…" autocomplete="off" aria-label="Search movies or TV series" />' +
+    '<button class="btn primary" id="homeSearchBtn">Search</button>' +
+    "</div></div></section>"
+  );
+}
+
+function wireHomeSearch() {
+  const input = document.getElementById("homeSearchInput");
+  const btn = document.getElementById("homeSearchBtn");
+  if (!input || !btn) return;
+  const go = function () {
+    const q = (input.value || "").trim();
+    if (!q) { input.focus(); return; }
+    location.hash = "#/search/" + encodeURIComponent(q);
+  };
+  btn.addEventListener("click", go);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) go();
+  });
+}
+
 async function renderHome() {
-  app.innerHTML = '<div class="hero"></div>' + sectionHTML("Popular Movies", skeletons(10));
+  app.innerHTML = '<div class="hero"></div>' + sectionHTML("Explore Movies", skeletons(12));
   try {
-    const [pop, top, up, tv] = await Promise.all([
+    const [trend, pop] = await Promise.all([
+      tmdb("/trending/movie/week", { page: 1 }),
       tmdb("/movie/popular", { page: 1 }),
-      tmdb("/movie/top_rated", { page: 1 }),
-      tmdb("/movie/upcoming", { page: 1 }),
-      tmdb("/tv/popular", { page: 1 }),
     ]);
-    const feat = (pop.results || [])[0];
+    /* Real trending: pick from this week's trending so the hero changes as
+       trending changes. Rotate through the top few for freshness. */
+    const trending = (trend.results || []).filter((x) => x.backdrop_path);
+    const feat = trending.length
+      ? trending[Math.floor(Math.random() * Math.min(5, trending.length))]
+      : (pop.results || [])[0];
+
     let html = "";
     if (feat) {
       html +=
@@ -172,14 +229,17 @@ async function renderHome() {
         (feat.backdrop_path ? '<img class="bd" src="' + IMG_BD + feat.backdrop_path + '" alt="">' : "") +
         '<div class="veil"></div><div class="hero-body">' +
         '<div class="pill-row"><span class="pill">Trending now</span><span class="pill">★ ' + rating(feat.vote_average) + '</span><span class="pill">' + year(feat.release_date) + "</span></div>" +
-        "<h1>" + esc(feat.title) + "</h1><p>" + esc(feat.overview || "No overview available.") + "</p>" +
+        "<h1>" + esc(feat.title || feat.name) + "</h1><p>" + esc(feat.overview || "No overview available.") + "</p>" +
         '<button class="btn primary" data-id="' + feat.id + '" data-type="movie">▶ Watch now</button></div></section>';
     }
-    html += sectionHTML("Popular Movies", gridHTML((pop.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Top Rated Movies", gridHTML((top.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Upcoming Movies", gridHTML((up.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Popular TV Series", gridHTML((tv.results || []).slice(0, 12), "tv"));
+
+    html += aboutHTML();
+    html += faqHTML();
+    html += homeSearchHTML();
+    html += sectionHTML("Explore Movies", gridHTML((pop.results || []).slice(0, 18), "movie"));
+
     app.innerHTML = html;
+    wireHomeSearch();
   } catch (err) {
     app.innerHTML = msgHTML("Couldn't load the homepage", err.message);
   }
@@ -205,10 +265,9 @@ async function renderList(type) {
 async function renderSearch(query) {
   app.innerHTML = sectionHTML('Results for "' + query + '"', skeletons(12));
   try {
-    const q = encodeURIComponent(query);
     const [m, t] = await Promise.all([
-      fetch(TMDB_BASE + "/search/movie?api_key=" + TMDB_API_KEY + "&query=" + q).then((r) => r.json()),
-      fetch(TMDB_BASE + "/search/tv?api_key=" + TMDB_API_KEY + "&query=" + q).then((r) => r.json()),
+      tmdb("/search/movie", { query: query }),
+      tmdb("/search/tv", { query: query }),
     ]);
     const movies = (m && m.results) || [];
     const shows = (t && t.results) || [];
@@ -434,56 +493,6 @@ if (document.getElementById("searchBtn")) {
     if (e.key === "Enter") doSearch();
   });
 }
-
-/* =========================================================
-   Anti devtools / anti inspect / anti debug
-   ========================================================= */
-(function protect() {
-  const block = function (e) { e.preventDefault(); e.stopPropagation(); return false; };
-
-  document.addEventListener("contextmenu", block);
-  document.addEventListener("dragstart", block);
-  document.addEventListener("selectstart", function (e) {
-    if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return block(e);
-  });
-
-  document.addEventListener("keydown", function (e) {
-    const k = (e.key || "").toLowerCase();
-    const combo =
-      e.key === "F12" ||
-      ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i", "j", "c", "k", "e"].indexOf(k) !== -1) ||
-      ((e.ctrlKey || e.metaKey) && ["u", "s"].indexOf(k) !== -1);
-    if (combo) { block(e); warn(); }
-  }, true);
-
-  let overlay = null;
-  function warn() {
-    if (overlay) return;
-    overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;" +
-      "background:rgba(7,8,12,.96);color:#eef1f7;font:600 18px system-ui;text-align:center;padding:24px";
-    overlay.innerHTML = "Developer tools are disabled on ReelRift.<br><span style='font-weight:400;font-size:14px;color:#96a0b5'>Closing this notice in a moment…</span>";
-    document.body.appendChild(overlay);
-    setTimeout(function () { if (overlay) { overlay.remove(); overlay = null; } }, 1800);
-  }
-
-  /* devtools open detection (window size heuristic) */
-  setInterval(function () {
-    const w = window.outerWidth - window.innerWidth;
-    const h = window.outerHeight - window.innerHeight;
-    if (w > 200 || h > 220) warn();
-  }, 1500);
-
-  /* discourage console debugging */
-  try {
-    if (window.console) {
-      console.clear();
-      console.log("%cReelRift", "color:#ff3d5a;font-size:22px;font-weight:800");
-      console.log("%cInspecting this page is disabled.", "color:#96a0b5;font-size:13px");
-    }
-  } catch (e) {}
-})();
 
 if (app) route();
 
