@@ -434,56 +434,6 @@ if (document.getElementById("searchBtn")) {
   });
 }
 
-/* =========================================================
-   Anti devtools / anti inspect / anti debug
-   ========================================================= */
-(function protect() {
-  const block = function (e) { e.preventDefault(); e.stopPropagation(); return false; };
-
-  document.addEventListener("contextmenu", block);
-  document.addEventListener("dragstart", block);
-  document.addEventListener("selectstart", function (e) {
-    if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return block(e);
-  });
-
-  document.addEventListener("keydown", function (e) {
-    const k = (e.key || "").toLowerCase();
-    const combo =
-      e.key === "F12" ||
-      ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i", "j", "c", "k", "e"].indexOf(k) !== -1) ||
-      ((e.ctrlKey || e.metaKey) && ["u", "s"].indexOf(k) !== -1);
-    if (combo) { block(e); warn(); }
-  }, true);
-
-  let overlay = null;
-  function warn() {
-    if (overlay) return;
-    overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;" +
-      "background:rgba(7,8,12,.96);color:#eef1f7;font:600 18px system-ui;text-align:center;padding:24px";
-    overlay.innerHTML = "Developer tools are disabled on ReelRift.<br><span style='font-weight:400;font-size:14px;color:#96a0b5'>Closing this notice in a moment…</span>";
-    document.body.appendChild(overlay);
-    setTimeout(function () { if (overlay) { overlay.remove(); overlay = null; } }, 1800);
-  }
-
-  /* devtools open detection (window size heuristic) */
-  setInterval(function () {
-    const w = window.outerWidth - window.innerWidth;
-    const h = window.outerHeight - window.innerHeight;
-    if (w > 200 || h > 220) warn();
-  }, 1500);
-
-  /* discourage console debugging */
-  try {
-    if (window.console) {
-      console.clear();
-      console.log("%cReelRift", "color:#ff3d5a;font-size:22px;font-weight:800");
-      console.log("%cInspecting this page is disabled.", "color:#96a0b5;font-size:13px");
-    }
-  } catch (e) {}
-})();
-
 if (app) route();
 
 /* ---------- footer (Made by Myticmoth + Discord) ---------- */
