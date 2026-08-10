@@ -155,16 +155,73 @@ if (app) app.addEventListener("click", function (e) {
 });
 
 /* ---------- pages ---------- */
+/* ---------- home sub-sections ---------- */
+function aboutHTML() {
+  return (
+    '<section class="section about fade"><div class="about-card">' +
+    "<h2>What is ReelRift?</h2>" +
+    "<p>ReelRift is a modern streaming interface for discovering and watching popular movies and TV series. " +
+    "Browse what's trending, search for anything you like, and start watching instantly with multiple playback " +
+    "servers — all in one clean, fast, dark-themed experience. No account or payment required.</p>" +
+    "</div></section>"
+  );
+}
+
+function faqHTML() {
+  const faqs = [
+    { q: "Is ReelRift free to use?", a: "Yes. ReelRift is completely free to browse and stream. No account or payment is required." },
+    { q: "Where does the content come from?", a: "Title details and posters come from TMDb. Playback is provided through third-party streaming servers." },
+    { q: "What if a title won't play?", a: "Try switching to a different server using the server buttons on the watch page. Some titles may be temporarily unavailable or not released for streaming yet." },
+    { q: "Do I need to sign up?", a: "No sign up is needed. Just search or browse and press Watch now." },
+  ];
+  const items = faqs
+    .map(function (f) {
+      return '<details class="faq-item"><summary>' + esc(f.q) + "</summary><p>" + esc(f.a) + "</p></details>";
+    })
+    .join("");
+  return '<section class="section faq fade"><div class="section-head"><h2>Frequently Asked Questions</h2></div>' + items + "</section>";
+}
+
+function homeSearchHTML() {
+  return (
+    '<section class="section home-search fade"><div class="hs-card">' +
+    "<h2>Find something to watch</h2>" +
+    '<div class="hs-row">' +
+    '<input id="homeSearchInput" type="search" placeholder="Search movies or TV series…" autocomplete="off" aria-label="Search movies or TV series" />' +
+    '<button class="btn primary" id="homeSearchBtn">Search</button>' +
+    "</div></div></section>"
+  );
+}
+
+function wireHomeSearch() {
+  const input = document.getElementById("homeSearchInput");
+  const btn = document.getElementById("homeSearchBtn");
+  if (!input || !btn) return;
+  const go = function () {
+    const q = (input.value || "").trim();
+    if (!q) { input.focus(); return; }
+    location.hash = "#/search/" + encodeURIComponent(q);
+  };
+  btn.addEventListener("click", go);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) go();
+  });
+}
+
 async function renderHome() {
-  app.innerHTML = '<div class="hero"></div>' + sectionHTML("Popular Movies", skeletons(10));
+  app.innerHTML = '<div class="hero"></div>' + sectionHTML("Explore Movies", skeletons(12));
   try {
-    const [pop, top, up, tv] = await Promise.all([
+    const [trend, pop] = await Promise.all([
+      tmdb("/trending/movie/week", { page: 1 }),
       tmdb("/movie/popular", { page: 1 }),
-      tmdb("/movie/top_rated", { page: 1 }),
-      tmdb("/movie/upcoming", { page: 1 }),
-      tmdb("/tv/popular", { page: 1 }),
     ]);
-    const feat = (pop.results || [])[0];
+    /* Real trending: pick from this week's trending so the hero changes as
+       trending changes. Rotate through the top few for freshness. */
+    const trending = (trend.results || []).filter((x) => x.backdrop_path);
+    const feat = trending.length
+      ? trending[Math.floor(Math.random() * Math.min(5, trending.length))]
+      : (pop.results || [])[0];
+
     let html = "";
     if (feat) {
       html +=
@@ -172,14 +229,17 @@ async function renderHome() {
         (feat.backdrop_path ? '<img class="bd" src="' + IMG_BD + feat.backdrop_path + '" alt="">' : "") +
         '<div class="veil"></div><div class="hero-body">' +
         '<div class="pill-row"><span class="pill">Trending now</span><span class="pill">★ ' + rating(feat.vote_average) + '</span><span class="pill">' + year(feat.release_date) + "</span></div>" +
-        "<h1>" + esc(feat.title) + "</h1><p>" + esc(feat.overview || "No overview available.") + "</p>" +
+        "<h1>" + esc(feat.title || feat.name) + "</h1><p>" + esc(feat.overview || "No overview available.") + "</p>" +
         '<button class="btn primary" data-id="' + feat.id + '" data-type="movie">▶ Watch now</button></div></section>';
     }
-    html += sectionHTML("Popular Movies", gridHTML((pop.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Top Rated Movies", gridHTML((top.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Upcoming Movies", gridHTML((up.results || []).slice(0, 12), "movie"));
-    html += sectionHTML("Popular TV Series", gridHTML((tv.results || []).slice(0, 12), "tv"));
+
+    html += aboutHTML();
+    html += faqHTML();
+    html += homeSearchHTML();
+    html += sectionHTML("Explore Movies", gridHTML((pop.results || []).slice(0, 18), "movie"));
+
     app.innerHTML = html;
+    wireHomeSearch();
   } catch (err) {
     app.innerHTML = msgHTML("Couldn't load the homepage", err.message);
   }
