@@ -2,10 +2,10 @@
    ReelRift — pure JavaScript app
    ========================================================= */
 
-/* ---------- ONE configuration variable ---------- */
-const TMDB_API_KEY = "257654f35e3dff105574f97fb4b97035";
-
-const TMDB_BASE = "https://api.themoviedb.org/3";
+/* ---------- config ---------- */
+/* The TMDb API key now lives on the server. The browser only ever
+   talks to our own /api/tmdb proxy, so the key is never exposed. */
+const TMDB_PROXY = "/api/tmdb";
 const IMG = "https://image.tmdb.org/t/p/w500";
 const IMG_SM = "https://image.tmdb.org/t/p/w300";
 const IMG_BD = "https://image.tmdb.org/t/p/original";
@@ -81,8 +81,8 @@ function buildServers(type, id, season, episode) {
 
 /* ---------- TMDb fetch ---------- */
 async function tmdb(path, params) {
-  const url = new URL(TMDB_BASE + path);
-  url.searchParams.set("api_key", TMDB_API_KEY);
+  const url = new URL(TMDB_PROXY, location.origin);
+  url.searchParams.set("path", path);
   Object.keys(params || {}).forEach(function (k) {
     url.searchParams.set(k, params[k]);
   });
@@ -205,10 +205,9 @@ async function renderList(type) {
 async function renderSearch(query) {
   app.innerHTML = sectionHTML('Results for "' + query + '"', skeletons(12));
   try {
-    const q = encodeURIComponent(query);
     const [m, t] = await Promise.all([
-      fetch(TMDB_BASE + "/search/movie?api_key=" + TMDB_API_KEY + "&query=" + q).then((r) => r.json()),
-      fetch(TMDB_BASE + "/search/tv?api_key=" + TMDB_API_KEY + "&query=" + q).then((r) => r.json()),
+      tmdb("/search/movie", { query: query }),
+      tmdb("/search/tv", { query: query }),
     ]);
     const movies = (m && m.results) || [];
     const shows = (t && t.results) || [];
