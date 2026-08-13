@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/css" href="https://www.xml-sitemaps.com/css/sitemap.css"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- 1. Homepage -->
+  <url>
+       <loc>https://reelrift-lake.vercel.app/index.html#/</loc>
+       <lastmod>2026-08-10T10:24:43+00:00</lastmod>
+       <changefreq>daily</changefreq>
+       <priority>1.0000</priority>
+  </url>
+
+  <!-- 2. Movies Section -->
+  <url>
+       <loc>https://reelrift-lake.vercel.app/index.html#/movies</loc>
+       <lastmod>2026-08-10T10:24:43+00:00</lastmod>
+       <changefreq>weekly</changefreq>
+       <priority>0.8000</priority>
+  </url>
+
+  <!-- 3. TV Series Section -->
+  <url>
+       <loc>https://reelrift-lake.vercel.app/index.html#/tv</loc>
+       <lastmod>2026-08-10T10:24:43+00:00</lastmod>
+       <changefreq>weekly</changefreq>
+       <priority>0.8000</priority>
+  </url>
+
+</urlset>
