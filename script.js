@@ -599,18 +599,60 @@ function setActiveNav(name) {
   });
 }
 
+
 function route() {
-  const hash = location.hash.replace(/^#\/?/, "");
-  const parts = hash.split("/").filter(Boolean);
-  if (!parts.length) { setActiveNav("home"); return renderHome(); }
-  if (parts[0] === "updates") { setActiveNav("updates"); return renderUpdates(); }
-  if (parts[0] === "movies") { setActiveNav("movies"); return renderList("movie"); }
-  if (parts[0] === "tv" && parts.length === 1) { setActiveNav("tv"); return renderList("tv"); }
-  if (parts[0] === "search") { setActiveNav(""); return renderSearch(decodeURIComponent(parts[1] || "")); }
-  if (parts[0] === "movie" && parts[1]) { setActiveNav("movies"); return renderMovie(parts[1]); }
-  if (parts[0] === "tv" && parts[1]) { setActiveNav("tv"); return renderTV(parts[1], parts[2], parts[3]); }
+  let path = location.pathname.replace(/^\/+|\/+$/g, "");
+
+  // Support old hash routes: /index.html#/movies
+  if (location.hash) {
+    path = location.hash.replace(/^#\/?/, "").replace(/\/+$/g, "");
+  }
+
+  const parts = path.split("/").filter(Boolean);
+
+  // Home
+  if (!parts.length || parts[0] === "index.html") {
+    setActiveNav("home");
+    return renderHome();
+  }
+
+  // Pages
+  if (parts[0] === "updates") {
+    setActiveNav("updates");
+    return renderUpdates();
+  }
+
+  if (parts[0] === "movies") {
+    setActiveNav("movies");
+    return renderList("movie");
+  }
+
+  if (parts[0] === "tv" && parts.length === 1) {
+    setActiveNav("tv");
+    return renderList("tv");
+  }
+
+  // Search
+  if (parts[0] === "search") {
+    setActiveNav("");
+    return renderSearch(decodeURIComponent(parts[1] || ""));
+  }
+
+  // Movie details
+  if (parts[0] === "movie" && parts[1]) {
+    setActiveNav("movies");
+    return renderMovie(parts[1]);
+  }
+
+  // TV details
+  if (parts[0] === "tv" && parts[1]) {
+    setActiveNav("tv");
+    return renderTV(parts[1], parts[2], parts[3]);
+  }
+
   app.innerHTML = msgHTML("Page not found", "That page doesn't exist on ReelRift.");
 }
+
 
 if (app) window.addEventListener("hashchange", route);
 
