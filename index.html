@@ -1,18 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ReelRift — Stream Movies & TV Series</title>
-<meta name="description" content="ReelRift is a modern platform for discovering popular movies and TV series with a smooth streaming experience." />
-<link rel="stylesheet" href="/style.css" />
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Primary SEO -->
+  <title>ReelRift — Stream Movies &amp; TV Series</title>
+
+  <meta
+    name="description"
+    content="ReelRift is a movie and TV series platform for discovering popular films, TV shows, and the latest updates."
+  />
+
+  <meta name="application-name" content="ReelRift" />
+  <meta name="apple-mobile-web-app-title" content="ReelRift" />
+
+  <meta
+    name="robots"
+    content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+  />
+
+  <!-- Canonical -->
+  <link
+    rel="canonical"
+    href="https://reelrift-lake.vercel.app/"
+  />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ReelRift" />
+  <meta
+    property="og:title"
+    content="ReelRift — Movies &amp; TV Series"
+  />
+  <meta
+    property="og:description"
+    content="Discover movies, TV series, and the latest updates on ReelRift."
+  />
+  <meta
+    property="og:url"
+    content="https://reelrift-lake.vercel.app/"
+  />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary" />
+  <meta
+    name="twitter:title"
+    content="ReelRift — Movies &amp; TV Series"
+  />
+  <meta
+    name="twitter:description"
+    content="Discover movies and TV series on ReelRift."
+  />
+
+  <!-- Website structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "ReelRift",
+    "alternateName": "ReelRift",
+    "url": "https://reelrift-lake.vercel.app/"
+  }
+  </script>
+
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
 
   <!-- Header -->
   <header class="site-header">
-
     <div class="wrap header-inner">
 
       <!-- Logo -->
@@ -69,7 +127,7 @@
           for="searchInput"
           class="sr-only"
         >
-          
+          Search movies or TV series
         </label>
 
         <input
@@ -78,7 +136,7 @@
           placeholder="Search movies or TV series…"
           autocomplete="off"
           aria-label="Search movies or TV series"
-        >
+        />
 
         <button
           class="btn primary"
@@ -91,7 +149,6 @@
       </div>
 
     </div>
-
   </header>
 
 
@@ -105,20 +162,16 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-
     <div
       class="wrap"
       id="siteFooter"
     >
     </div>
-
   </footer>
 
 
   <!-- JavaScript -->
-  
+  <script src="/script.js"></script>
 
-
-<script src="/script.js"></script>
 </body>
 </html>
