@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReelRift Admin — Server Configuration</title>
+<meta name="description" content="ReelRift admin panel for searching TMDb titles and configuring playback servers." />
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="/"><span class="dot"></span>REEL<span class="b">RIFT</span></a>
+    <nav class="nav"><button class="active">Admin Panel</button></nav>
+    <div class="search"><a class="btn" href="/">← Back to site</a>
+      <button class="btn hidden" id="logoutBtn">Log out</button></div>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<section id="loginView" class="admin-shell">
+  <div class="panel login-card">
+    <h3>Admin login</h3>
+    <div class="field"><label>Username</label><input id="user" autocomplete="username" /></div>
+    <div class="field"><label>Password</label><input id="pass" type="password" autocomplete="current-password" /></div>
+    <button class="btn primary" id="loginBtn" style="width:100%">Sign in</button>
+    <div class="error hidden" id="loginErr"></div>
+  </div>
+</section>
+
+<!-- PANEL -->
+<section id="panelView" class="admin-shell hidden">
+  <div class="panel">
+    <h3>1 · Find a title on TMDb</h3>
+    <div class="row2">
+      <div class="field"><label>Type</label>
+        <select id="aType"><option value="movie">Movie</option><option value="tv">TV Series</option></select>
+      </div>
+      <div class="field"><label>Search query</label><input id="aQuery" placeholder="e.g. Spider-Man" /></div>
+    </div>
+    <button class="btn primary" id="aSearch">Search TMDb</button>
+    <div class="error hidden" id="aErr"></div>
+    <div class="res-list" id="aResults" style="margin-top:14px"></div>
+  </div>
+
+  <div class="panel">
+    <h3>2 · Selected title</h3>
+    <div id="aSelected" style="color:var(--muted);font-size:14px">No title selected yet.</div>
+    <div class="row2" id="aSeasonRow" style="margin-top:12px">
+      <div class="field"><label>Season</label><select id="aSeason"></select></div>
+      <div class="field"><label>Episode</label><select id="aEpisode"></select></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>3 · Configure servers</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px">
+      Leave a field empty to use the default template URL. Only enter video sources you are authorized to use.
+    </p>
+    <div class="field"><label>Availability status</label>
+      <select id="aStatus">
+        <option value="available">Available (watchable)</option>
+        <option value="unavailable">Unavailable (blocked)</option>
+        <option value="coming_soon">Coming soon (blocked)</option>
+      </select>
+    </div>
+    <div class="field"><label>Server 1 URL</label><input id="s1" placeholder="auto (template)" /></div>
+    <div class="field"><label>Server 2 URL</label><input id="s2" placeholder="auto (template)" /></div>
+    <div class="field"><label>Server 3 URL</label><input id="s3" placeholder="auto (template)" /></div>
+    <button class="btn primary" id="aSave">Save settings</button>
+    <button class="btn" id="aFill">Fill with templates</button>
+    <button class="btn" id="aDelete">Delete this entry</button>
+    <div class="ok hidden" id="aOk"></div>
+    <div class="error hidden" id="aSaveErr"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Site footer · Discord server</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Footer shows “Made by Myticmoth” plus this invite link.</p>
+    <div class="field"><label>Discord invite URL</label><input id="discord" placeholder="https://discord.gg/..." /></div>
+    <button class="btn primary" id="dSave">Save Discord link</button>
+    <div class="ok hidden" id="dOk"></div>
+    <div class="error hidden" id="dErr"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Post a site update</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Announcements appear on the public Updates page.</p>
+    <div class="field"><label>Title</label><input id="annTitle" maxlength="160" placeholder="e.g. New servers added" /></div>
+    <div class="field"><label>Message</label><textarea id="annBody" rows="4" maxlength="4000" placeholder="What's new?"></textarea></div>
+    <div class="field"><label><input type="checkbox" id="annPinned" style="width:auto;margin-right:8px" />Pin to top</label></div>
+    <button class="btn primary" id="annSave">Publish update</button>
+    <div class="ok hidden" id="annOk"></div>
+    <div class="error hidden" id="annErr"></div>
+    <div id="annList" style="margin-top:16px"></div>
+  </div>
+
+  <div class="panel">
+    <h3>User reports</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Messages submitted from the Updates page.</p>
+    <button class="btn" id="repRefresh">Refresh reports</button>
+    <div id="repList" style="margin-top:14px"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Saved settings (localStorage: reelrift_servers)</h3>
+    <div id="aTable"></div>
+  </div>
+</section>
+
+
+
+
+<script src="/script.js"></script><script src="/admin.js"></script>
+</body>
+</html>
