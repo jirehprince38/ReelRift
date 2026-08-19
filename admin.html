@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ReelRift Admin — Server Configuration</title>
+<title>ReelRift Control Room — Admin</title>
 <meta name="description" content="ReelRift admin panel for searching TMDb titles and configuring playback servers for movies and TV episodes." />
 <meta name="robots" content="noindex" />
 <link rel="icon" href="/favicon.ico" type="image/x-icon" />
 <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
+<body class="admin-page">
 <header class="site-header">
   <div class="wrap header-inner">
     <a class="logo" href="/index.html"><span class="dot"></span>REEL<span class="b">RIFT</span></a>
@@ -22,7 +22,8 @@
 <!-- LOGIN -->
 <section id="loginView" class="admin-shell">
   <div class="panel login-card">
-    <h3>Admin login</h3>
+    <h3>Welcome back</h3>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px">Sign in to manage your ReelRift catalog.</p>
     <div class="field"><label>Username</label><input id="user" autocomplete="username" /></div>
     <div class="field"><label>Password</label><input id="pass" type="password" autocomplete="current-password" /></div>
     <button class="btn primary" id="loginBtn" style="width:100%">Sign in</button>
@@ -32,6 +33,10 @@
 
 <!-- PANEL -->
 <section id="panelView" class="admin-shell hidden">
+  <div class="admin-intro">
+    <div><span class="eyebrow">REELRIFT / ADMIN</span><h1>Control room</h1><p>Manage playback availability and the public streaming experience.</p></div>
+    <span class="status-chip">● System online</span>
+  </div>
   <div class="panel">
     <h3>1 · Find a title on TMDb</h3>
     <div class="row2">
