@@ -1,177 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Primary SEO -->
-  <title>ReelRift — Stream Movies &amp; TV Series</title>
-
-  <meta
-    name="description"
-    content="ReelRift is a movie and TV series platform for discovering popular films, TV shows, and the latest updates."
-  />
-
-  <meta name="application-name" content="ReelRift" />
-  <meta name="apple-mobile-web-app-title" content="ReelRift" />
-
-  <meta
-    name="robots"
-    content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-  />
-
-  <!-- Canonical -->
-  <link
-    rel="canonical"
-    href="https://reelrift-lake.vercel.app/"
-  />
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="ReelRift" />
-  <meta
-    property="og:title"
-    content="ReelRift — Movies &amp; TV Series"
-  />
-  <meta
-    property="og:description"
-    content="Discover movies, TV series, and the latest updates on ReelRift."
-  />
-  <meta
-    property="og:url"
-    content="https://reelrift-lake.vercel.app/"
-  />
-
-  <!-- Twitter / X -->
-  <meta name="twitter:card" content="summary" />
-  <meta
-    name="twitter:title"
-    content="ReelRift — Movies &amp; TV Series"
-  />
-  <meta
-    name="twitter:description"
-    content="Discover movies and TV series on ReelRift."
-  />
-
-  <!-- Website structured data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "ReelRift",
-    "alternateName": "ReelRift",
-    "url": "https://reelrift-lake.vercel.app/"
-  }
-  </script>
-
-  <link rel="stylesheet" href="/style.css" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ReelRift — Stream Movies &amp; TV Series</title>
+<meta name="description" content="ReelRift is a modern dark streaming interface for discovering popular movies, top rated films and TV series with instant multi-server playback." />
+<meta property="og:title" content="ReelRift — Stream Movies &amp; TV Series" />
+<meta property="og:description" content="Discover popular movies, top rated films and TV series on ReelRift." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="/style.css" />
 </head>
-
-<body>
-
-  <!-- Header -->
-  <header class="site-header">
-    <div class="wrap header-inner">
-
-      <!-- Logo -->
-      <a
-        class="logo"
-        href="/"
-        aria-label="ReelRift Home"
-      >
-        <span class="dot"></span>
-        REEL<span class="b">RIFT</span>
-      </a>
-
-      <!-- Navigation -->
-      <nav
-        class="nav"
-        aria-label="Main navigation"
-      >
-
-        <button
-          data-nav="home"
-          class="active"
-          type="button"
-        >
-          Home
-        </button>
-
-        <button
-          data-nav="movies"
-          type="button"
-        >
-          Movies
-        </button>
-
-        <button
-          data-nav="tv"
-          type="button"
-        >
-          TV Series
-        </button>
-
-        <button
-          data-nav="updates"
-          type="button"
-        >
-          Updates
-        </button>
-
-      </nav>
-
-      <!-- Search -->
-      <div class="search">
-
-        <label
-          for="searchInput"
-          class="sr-only"
-        >
-          
-        </label>
-
-        <input
-          id="searchInput"
-          type="search"
-          placeholder="Search movies or TV series…"
-          autocomplete="off"
-          aria-label="Search movies or TV series"
-        />
-
-        <button
-          class="btn primary"
-          id="searchBtn"
-          type="button"
-        >
-          Search
-        </button>
-
-      </div>
-
+<body class="public-page">
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="#" data-nav="home"><span class="dot"></span>REEL<span class="b">RIFT</span></a>
+    <nav class="nav">
+      <button data-nav="home" class="active">Home</button>
+      <button data-nav="movies">Movies</button>
+      <button data-nav="tv">TV Series</button>
+    </nav>
+    <div class="search">
+      <input id="searchInput" type="search" placeholder="Search movies or TV series…" autocomplete="off" />
+      <button class="btn primary" id="searchBtn">Search</button>
     </div>
-  </header>
+  </div>
+</header>
 
+<main class="wrap" id="app"></main>
 
-  <!-- Main Content -->
-  <main
-    class="wrap"
-    id="app"
-  >
-  </main>
+<footer class="site-footer">
+  <div class="wrap" id="siteFooter"></div>
+</footer>
 
-
-  <!-- Footer -->
-  <footer class="site-footer">
-    <div
-      class="wrap"
-      id="siteFooter"
-    >
-    </div>
-  </footer>
-
-
-  <!-- JavaScript -->
-  <script src="/script.js"></script>
-
+<script src="/script.js"></script>
 </body>
 </html>

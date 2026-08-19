@@ -5,19 +5,7 @@
 /* ---------- config ---------- */
 /* The TMDb API key now lives on the server. The browser only ever
    talks to our own /api/tmdb proxy, so the key is never exposed. */
-// Ilagay ito sa pinakataas ng iyong script.js
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const type = urlParams.get('type');
-    const id = urlParams.get('id');
-
-    if (type && id) {
-        // Isasalin nito ang parameter patungo sa iyong hash route (#/movie/id)
-        window.location.hash = `/${type}/${id}`;
-    }
-})();
-
-const TMDB_PROXY = "/api/public/tmdb";
+const TMDB_PROXY = "/api/tmdb";
 const IMG = "https://image.tmdb.org/t/p/w500";
 const IMG_SM = "https://image.tmdb.org/t/p/w300";
 const IMG_BD = "https://image.tmdb.org/t/p/original";
@@ -221,7 +209,7 @@ function wireHomeSearch() {
 }
 
 async function renderHome() {
-  app.innerHTML = '<div class="hero"></div>' + skeletons(6);
+  app.innerHTML = '<div class="hero"></div>' + sectionHTML("Explore Movies", skeletons(12));
   try {
     const [trend, pop] = await Promise.all([
       tmdb("/trending/movie/week", { page: 1 }),
@@ -248,6 +236,7 @@ async function renderHome() {
     html += aboutHTML();
     html += faqHTML();
     html += homeSearchHTML();
+    html += sectionHTML("Explore Movies", gridHTML((pop.results || []).slice(0, 18), "movie"));
 
     app.innerHTML = html;
     wireHomeSearch();
@@ -264,42 +253,8 @@ async function renderList(type) {
     let html = sectionHTML(type === "movie" ? "Popular Movies" : "Popular TV Series", gridHTML(a.results, type));
     html += sectionHTML(type === "movie" ? "Top Rated Movies" : "Top Rated TV Series", gridHTML(b.results, type));
     if (type === "movie") {
-      const [up, now] = await Promise.all([
-        tmdb("/movie/upcoming", { page: 1 }),
-        tmdb("/movie/now_playing", { page: 1 }),
-      ]);
-      const today = new Date().toISOString().slice(0, 10);
-      const nowIds = new Set((now.results || []).map(function (m) { return m.id; }));
-      /* TMDb's "upcoming" list still includes titles that already premiered in
-         some regions, which is why released movies were showing up there.
-         Keep only titles whose release date is still in the future and that are
-         not already playing. */
-      let upcoming = (up.results || [])
-        .filter(function (m) { return m.release_date && m.release_date >= today && !nowIds.has(m.id); })
-        .sort(function (a, b) { return a.release_date < b.release_date ? -1 : 1; });
-      if (upcoming.length < 6) {
-        /* Fallback: ask TMDb directly for titles releasing after today. */
-        try {
-          const disc = await tmdb("/discover/movie", {
-            sort_by: "popularity.desc",
-            "primary_release_date.gte": today,
-            "vote_count.gte": 0,
-            with_release_type: "2|3",
-            page: 1,
-          });
-          const seen = {};
-          upcoming = upcoming.concat(disc.results || []).filter(function (m) {
-            if (!m.release_date || m.release_date < today || nowIds.has(m.id) || seen[m.id]) return false;
-            seen[m.id] = 1;
-            return true;
-          }).sort(function (a, b) { return a.release_date < b.release_date ? -1 : 1; });
-        } catch (e) { /* keep whatever we have */ }
-      }
-      upcoming = upcoming.slice(0, 18);
-      html += sectionHTML("In Cinemas Now", gridHTML((now.results || []).slice(0, 18), "movie"));
-      if (upcoming.length) {
-        html += sectionHTML("Upcoming Movies", gridHTML(upcoming, "movie"));
-      }
+      const up = await tmdb("/movie/upcoming", { page: 1 });
+      html += sectionHTML("Upcoming Movies", gridHTML(up.results, "movie"));
     }
     app.innerHTML = html;
   } catch (err) {
@@ -497,101 +452,6 @@ async function loadEpisodes(id, season, activeEp) {
   }
 }
 
-
-/* ---------- updates & report page ---------- */
-function fmtDate(iso) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-  } catch (e) { return ""; }
-}
-
-async function renderUpdates() {
-  app.innerHTML = sectionHTML("Updates", '<div class="msg">Loading updates…</div>');
-  let items = [];
-  try {
-    const res = await fetch("/api/public/announcements", { headers: { "Cache-Control": "no-store" } });
-    const data = await res.json();
-    items = data.announcements || [];
-  } catch (e) { items = []; }
-
-  const list = items.length
-    ? '<div class="updates-list">' + items.map(function (a) {
-        return '<article class="update-card' + (a.pinned ? " pinned" : "") + '">' +
-          '<div class="update-meta">' + (a.pinned ? '<span class="pill">Pinned</span>' : "") +
-          '<span class="update-date">' + esc(fmtDate(a.created_at)) + "</span></div>" +
-          "<h3>" + esc(a.title) + "</h3><p>" + esc(a.body) + "</p></article>";
-      }).join("") + "</div>"
-    : '<div class="msg">No announcements yet. Check back soon.</div>';
-
-  const form =
-    '<section class="section fade"><div class="report-card">' +
-    "<h2>Report an issue</h2>" +
-    '<p class="report-sub">Broken playback, wrong title, or a bug? Send it straight to the ReelRift admin team.</p>' +
-    '<div class="row2">' +
-    '<div class="field"><label for="rName">Your name <span class="opt">(optional)</span></label><input id="rName" maxlength="120" placeholder="Name" /></div>' +
-    '<div class="field"><label for="rEmail">Email <span class="opt">(optional)</span></label><input id="rEmail" type="email" maxlength="160" placeholder="you@example.com" /></div>' +
-    "</div>" +
-    '<div class="field"><label for="rCat">Report type</label><select id="rCat">' +
-    '<option value="broken_video">Video won\u2019t play</option>' +
-    '<option value="wrong_title">Wrong title or details</option>' +
-    '<option value="bug">Website bug</option>' +
-    '<option value="request">Title request</option>' +
-    '<option value="general">Something else</option>' +
-    "</select></div>" +
-    '<div class="field"><label for="rMsg">Message</label><textarea id="rMsg" rows="5" maxlength="4000" placeholder="Tell us what happened, and include the title name if you can."></textarea></div>' +
-    '<button class="btn primary" id="rSend">Submit report</button>' +
-    '<div class="error hidden" id="rErr"></div><div class="ok hidden" id="rOk"></div>' +
-    "</div></section>";
-
-  app.innerHTML =
-    '<section class="section page-head fade"><h1>Updates &amp; Reports</h1>' +
-    "<p>Announcements from the ReelRift team, plus a direct line to report problems.</p></section>" +
-    sectionHTML("Latest announcements", list) + form;
-
-  wireReportForm();
-}
-
-function wireReportForm() {
-  const btn = document.getElementById("rSend");
-  if (!btn) return;
-  const err = document.getElementById("rErr");
-  const ok = document.getElementById("rOk");
-  btn.addEventListener("click", async function () {
-    const msg = (document.getElementById("rMsg").value || "").trim();
-    err.classList.add("hidden"); ok.classList.add("hidden");
-    if (msg.length < 5) {
-      err.textContent = "Please describe the issue first.";
-      err.classList.remove("hidden");
-      return;
-    }
-    btn.disabled = true;
-    btn.textContent = "Sending…";
-    try {
-      const res = await fetch("/api/public/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: document.getElementById("rName").value,
-          email: document.getElementById("rEmail").value,
-          category: document.getElementById("rCat").value,
-          message: msg,
-        }),
-      });
-      const data = await res.json().catch(function () { return {}; });
-      if (!res.ok) throw new Error(data.error || "Could not send your report.");
-      ok.textContent = "Thanks! Your report was sent to the admin team.";
-      ok.classList.remove("hidden");
-      document.getElementById("rMsg").value = "";
-    } catch (e) {
-      err.textContent = e.message || "Network error. Please try again.";
-      err.classList.remove("hidden");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Submit report";
-    }
-  });
-}
-
 /* ---------- router ---------- */
 function setActiveNav(name) {
   document.querySelectorAll(".nav button").forEach(function (b) {
@@ -599,60 +459,17 @@ function setActiveNav(name) {
   });
 }
 
-
 function route() {
-  let path = location.pathname.replace(/^\/+|\/+$/g, "");
-
-  // Support old hash routes: /index.html#/movies
-  if (location.hash) {
-    path = location.hash.replace(/^#\/?/, "").replace(/\/+$/g, "");
-  }
-
-  const parts = path.split("/").filter(Boolean);
-
-  // Home
-  if (!parts.length || parts[0] === "index.html") {
-    setActiveNav("home");
-    return renderHome();
-  }
-
-  // Pages
-  if (parts[0] === "updates") {
-    setActiveNav("updates");
-    return renderUpdates();
-  }
-
-  if (parts[0] === "movies") {
-    setActiveNav("movies");
-    return renderList("movie");
-  }
-
-  if (parts[0] === "tv" && parts.length === 1) {
-    setActiveNav("tv");
-    return renderList("tv");
-  }
-
-  // Search
-  if (parts[0] === "search") {
-    setActiveNav("");
-    return renderSearch(decodeURIComponent(parts[1] || ""));
-  }
-
-  // Movie details
-  if (parts[0] === "movie" && parts[1]) {
-    setActiveNav("movies");
-    return renderMovie(parts[1]);
-  }
-
-  // TV details
-  if (parts[0] === "tv" && parts[1]) {
-    setActiveNav("tv");
-    return renderTV(parts[1], parts[2], parts[3]);
-  }
-
+  const hash = location.hash.replace(/^#\/?/, "");
+  const parts = hash.split("/").filter(Boolean);
+  if (!parts.length) { setActiveNav("home"); return renderHome(); }
+  if (parts[0] === "movies") { setActiveNav("movies"); return renderList("movie"); }
+  if (parts[0] === "tv" && parts.length === 1) { setActiveNav("tv"); return renderList("tv"); }
+  if (parts[0] === "search") { setActiveNav(""); return renderSearch(decodeURIComponent(parts[1] || "")); }
+  if (parts[0] === "movie" && parts[1]) { setActiveNav("movies"); return renderMovie(parts[1]); }
+  if (parts[0] === "tv" && parts[1]) { setActiveNav("tv"); return renderTV(parts[1], parts[2], parts[3]); }
   app.innerHTML = msgHTML("Page not found", "That page doesn't exist on ReelRift.");
 }
-
 
 if (app) window.addEventListener("hashchange", route);
 
@@ -660,7 +477,7 @@ document.querySelectorAll("[data-nav]").forEach(function (el) {
   el.addEventListener("click", function (e) {
     e.preventDefault();
     const n = el.dataset.nav;
-    location.hash = n === "home" ? "#/" : n === "movies" ? "#/movies" : n === "updates" ? "#/updates" : "#/tv";
+    location.hash = n === "home" ? "#/" : n === "movies" ? "#/movies" : "#/tv";
   });
 });
 
