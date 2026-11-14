@@ -177,11 +177,15 @@ function toggleWatchlist(item, type) {
 }
 
 function updateWatchlistBadge() {
-  const el = document.getElementById("watchlistCount");
-  if (!el) return;
   const list = getWatchlist();
-  el.textContent = list.length;
-  el.style.display = list.length > 0 ? "inline-block" : "none";
+  const count = list.length;
+  ["watchlistCount", "mobileWatchlistCount"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = count;
+      el.style.display = count > 0 ? "inline-block" : "none";
+    }
+  });
 }
 
 /* ---------- TMDB API PROXY CALL ---------- */
@@ -1088,7 +1092,7 @@ function closeReportModal() {
 
 /* ---------- APP ROUTER ---------- */
 function setActiveNav(name) {
-  document.querySelectorAll(".nav button").forEach(function (b) {
+  document.querySelectorAll(".nav button, .mobile-bottom-nav button").forEach(function (b) {
     b.classList.toggle("active", b.dataset.nav === name);
   });
 }

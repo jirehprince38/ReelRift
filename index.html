@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
 <title>ReelRift — Stream Movies &amp; TV Series in HD</title>
 <meta name="description" content="ReelRift is a premier dark streaming platform to discover and watch popular movies, trending blockbusters, and top-rated TV series with instant multi-server playback." />
 <meta name="keywords" content="movies, streaming, tv shows, watch series, cinema, free hd stream" />
@@ -123,6 +123,27 @@
 <footer class="site-footer">
   <div class="wrap" id="siteFooter"></div>
 </footer>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+  <button data-nav="home" class="mobile-nav-btn active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+    <span>Home</span>
+  </button>
+  <button data-nav="movies" class="mobile-nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+    <span>Movies</span>
+  </button>
+  <button data-nav="tv" class="mobile-nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+    <span>TV Series</span>
+  </button>
+  <button data-nav="watchlist" class="mobile-nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+    <span>My List</span>
+    <span class="badge-count mobile-badge-count" id="mobileWatchlistCount">0</span>
+  </button>
+</nav>
 
 <script src="/script.js"></script>
 </body>
