@@ -2,34 +2,124 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ReelRift — Stream Movies &amp; TV Series</title>
-<meta name="description" content="ReelRift is a modern dark streaming interface for discovering popular movies, top rated films and TV series with instant multi-server playback." />
-<meta property="og:title" content="ReelRift — Stream Movies &amp; TV Series" />
-<meta property="og:description" content="Discover popular movies, top rated films and TV series on ReelRift." />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ReelRift — Stream Movies &amp; TV Series in HD</title>
+<meta name="description" content="ReelRift is a premier dark streaming platform to discover and watch popular movies, trending blockbusters, and top-rated TV series with instant multi-server playback." />
+<meta name="keywords" content="movies, streaming, tv shows, watch series, cinema, free hd stream" />
+<meta name="theme-color" content="#07070a" />
+
+<!-- Open Graph / Social Meta -->
+<meta property="og:title" content="ReelRift — Stream Movies &amp; TV Series in HD" />
+<meta property="og:description" content="Discover trending movies, top-rated series, and stream with instant high-speed multi-server playback." />
 <meta property="og:type" content="website" />
+<meta property="og:image" content="/favicon.ico" />
 <meta name="twitter:card" content="summary_large_image" />
+
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
 <link rel="icon" href="/favicon.ico" type="image/x-icon" />
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body class="public-page">
+
+<!-- Header Navigation -->
 <header class="site-header">
   <div class="wrap header-inner">
-    <a class="logo" href="#" data-nav="home"><span class="dot"></span>REEL<span class="b">RIFT</span></a>
+    <a class="logo" href="#" data-nav="home" aria-label="ReelRift Home">
+      <span class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+          <path d="M7 2v20"></path>
+          <path d="M17 2v20"></path>
+          <path d="M2 12h20"></path>
+          <path d="M2 7h5"></path>
+          <path d="M2 17h5"></path>
+          <path d="M17 7h5"></path>
+          <path d="M17 17h5"></path>
+        </svg>
+      </span>
+      <span class="logo-text">REEL<span class="brand-gradient">RIFT</span></span>
+    </a>
+
     <nav class="nav">
-      <button data-nav="home" class="active">Home</button>
-      <button data-nav="movies">Movies</button>
-      <button data-nav="tv">TV Series</button>
+      <button data-nav="home" class="nav-btn active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span>Home</span>
+      </button>
+      <button data-nav="movies" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+        <span>Movies</span>
+      </button>
+      <button data-nav="tv" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+        <span>TV Series</span>
+      </button>
+      <button data-nav="watchlist" class="nav-btn">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+        <span>My List</span>
+        <span class="badge-count" id="watchlistCount">0</span>
+      </button>
     </nav>
-    <div class="search">
-      <input id="searchInput" type="search" placeholder="Search movies or TV series…" autocomplete="off" />
-      <button class="btn primary" id="searchBtn">Search</button>
+
+    <!-- Search Section with Live Dropdown -->
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search movies, TV shows, actors…" autocomplete="off" aria-label="Search" />
+        <button id="clearSearchBtn" class="clear-btn" aria-label="Clear search" style="display:none;">&times;</button>
+      </div>
+      <button class="btn btn-primary search-action-btn" id="searchBtn">Search</button>
+
+      <!-- Live Search Results Dropdown -->
+      <div class="live-search-dropdown" id="liveSearchDropdown"></div>
     </div>
   </div>
 </header>
 
-<main class="wrap" id="app"></main>
+<!-- Main App Container -->
+<main class="wrap main-content" id="app"></main>
 
+<!-- Report / Feedback Modal -->
+<div class="modal-overlay" id="reportModal" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Report Stream Issue</h3>
+      <button class="modal-close-btn" id="closeReportModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Having trouble with playback? Let us know which server or issue you are experiencing.</p>
+      <div class="field">
+        <label for="reportIssueType">Issue Type</label>
+        <select id="reportIssueType">
+          <option value="broken_stream">Video won't play / Black screen</option>
+          <option value="audio_sync">Audio out of sync</option>
+          <option value="wrong_video">Wrong title or episode</option>
+          <option value="buffering">Frequent buffering / slow</option>
+          <option value="other">Other issue</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="reportNote">Details (optional)</label>
+        <textarea id="reportNote" rows="3" placeholder="Server number, timestamp, or extra details..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="cancelReportBtn">Cancel</button>
+      <button class="btn btn-primary" id="submitReportBtn">Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Site Footer -->
 <footer class="site-footer">
   <div class="wrap" id="siteFooter"></div>
 </footer>
