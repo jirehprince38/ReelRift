@@ -13,6 +13,81 @@ const IMG_PROFILE = "https://image.tmdb.org/t/p/w185";
 const STORAGE_KEY = "reelrift_servers";
 const SITE_KEY = "reelrift_site";
 const WATCHLIST_KEY = "reelrift_watchlist";
+const HISTORY_KEY = "reelrift_history";
+
+/* ---------- CONTINUE WATCHING (WATCH HISTORY) ---------- */
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]") || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveHistory(item, type, season = 1, episode = 1) {
+  let list = getHistory();
+  const idStr = String(item.id);
+  list = list.filter((x) => !(String(x.id) === idStr && x.type === type));
+  list.unshift({
+    id: item.id,
+    type: type,
+    title: item.title || item.name || "Untitled",
+    poster_path: item.poster_path || "",
+    vote_average: item.vote_average || 0,
+    season: season,
+    episode: episode,
+    timestamp: Date.now(),
+  });
+  if (list.length > 14) list = list.slice(0, 14);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+}
+
+/* ---------- OFFICIAL YOUTUBE TRAILER SYSTEM ---------- */
+async function watchTrailer(type, id, title) {
+  try {
+    showToast("Searching for official trailer…", "info");
+    const res = await tmdb("/" + type + "/" + id + "/videos", {});
+    const vids = res.results || [];
+    const yt =
+      vids.find((v) => v.site === "YouTube" && v.type === "Trailer") ||
+      vids.find((v) => v.site === "YouTube" && (v.type === "Teaser" || v.type === "Clip")) ||
+      vids.find((v) => v.site === "YouTube");
+
+    if (!yt || !yt.key) {
+      showToast("No trailer found for this title.", "error");
+      return;
+    }
+
+    const modal = document.getElementById("trailerModal");
+    const frame = document.getElementById("trailerIframe");
+    const titleEl = document.getElementById("trailerModalTitle");
+    if (!modal || !frame) return;
+
+    if (titleEl) titleEl.textContent = (title || "Title") + " — Official Trailer";
+    frame.src = "https://www.youtube-nocookie.com/embed/" + yt.key + "?autoplay=1&rel=0";
+    modal.style.display = "flex";
+  } catch (e) {
+    showToast("Could not load trailer.", "error");
+  }
+}
+
+function closeTrailerModal() {
+  const modal = document.getElementById("trailerModal");
+  const frame = document.getElementById("trailerIframe");
+  if (modal) modal.style.display = "none";
+  if (frame) frame.src = "";
+}
+
+(function setupTrailerModal() {
+  const closeBtn = document.getElementById("closeTrailerModal");
+  if (closeBtn) closeBtn.onclick = closeTrailerModal;
+  const modal = document.getElementById("trailerModal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeTrailerModal();
+    });
+  }
+})();
 
 /* Embed Server Templates */
 const TEMPLATES = {
@@ -223,13 +298,16 @@ function cardHTML(item, type) {
   const title = item.title || item.name || "Untitled";
   const date = item.release_date || item.first_air_date || "";
   const isBookmarked = isInWatchlist(type, item.id);
+  const isHistory = !!item.timestamp;
 
   return (
-    '<article class="card fade" data-id="' + item.id + '" data-type="' + type + '">' +
+    '<article class="card fade" data-id="' + item.id + '" data-type="' + type + '"' +
+    (item.season ? ' data-season="' + item.season + '"' : "") +
+    (item.episode ? ' data-episode="' + item.episode + '"' : "") + '>' +
     '<div class="poster">' +
     posterHTML(item.poster_path, title) +
     '<span class="card-badge rating">★ ' + rating(item.vote_average) + "</span>" +
-    '<span class="card-badge quality">HD</span>' +
+    '<span class="card-badge quality">' + (isHistory ? "RESUME" : "HD") + "</span>" +
     '<div class="card-hover-overlay">' +
     '<button class="quick-play-btn" title="Watch Now" aria-label="Watch Now">' +
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
@@ -238,11 +316,32 @@ function cardHTML(item, type) {
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
     "</button>" +
     "</div>" +
+    (isHistory ? '<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:65%"></div></div>' : "") +
     "</div>" +
     '<div class="card-body">' +
     '<h3 title="' + esc(title) + '">' + esc(title) + "</h3>" +
-    "<small>" + (type === "movie" ? "Movie" : "Series") + " • " + year(date) + "</small>" +
+    "<small>" +
+    (item.season && item.episode ? "S" + item.season + " E" + item.episode + " • " : (type === "movie" ? "Movie" : "Series") + " • ") +
+    year(date) +
+    "</small>" +
     "</div></article>"
+  );
+}
+
+function scrollRowHTML(rowId, title, items, type) {
+  if (!items || !items.length) return "";
+  return (
+    '<section class="section">' +
+    '<div class="section-head">' +
+    '<h2 class="section-title">' + esc(title) + "</h2>" +
+    "</div>" +
+    '<div class="row-container">' +
+    '<button class="row-arrow left" aria-label="Scroll left" onclick="document.getElementById(\'' + rowId + '\').scrollBy({left:-420,behavior:\'smooth\'})">&lsaquo;</button>' +
+    '<div class="row-scroller" id="' + rowId + '">' +
+    items.map((i) => cardHTML(i, type)).join("") +
+    "</div>" +
+    '<button class="row-arrow right" aria-label="Scroll right" onclick="document.getElementById(\'' + rowId + '\').scrollBy({left:420,behavior:\'smooth\'})">&rsaquo;</button>' +
+    "</div></section>"
   );
 }
 
@@ -352,12 +451,59 @@ if (app) {
     }
 
     if (card && app.contains(card)) {
-      location.hash = "#/" + card.dataset.type + "/" + card.dataset.id;
+      if (card.dataset.type === "tv" && card.dataset.season && card.dataset.episode) {
+        location.hash = "#/tv/" + card.dataset.id + "/" + card.dataset.season + "/" + card.dataset.episode;
+      } else {
+        location.hash = "#/" + card.dataset.type + "/" + card.dataset.id;
+      }
     }
   });
 }
 
-/* ---------- HOMEPAGE RENDERER ---------- */
+/* ---------- HOMEPAGE RENDERER (HERO CAROUSEL & ROWS) ---------- */
+let heroIndex = 0;
+let heroItems = [];
+
+function buildHeroHTML(feat, index, total) {
+  if (!feat) return "";
+  const isBookmarked = isInWatchlist("movie", feat.id);
+  const dots = Array.from({ length: total }, (_, i) =>
+    '<span class="hero-dot' + (i === index ? " active" : "") + '" data-hero-idx="' + i + '"></span>'
+  ).join("");
+
+  return (
+    '<section class="hero fade" id="heroBanner">' +
+    (feat.backdrop_path ? '<img class="bd" src="' + IMG_BD + feat.backdrop_path + '" alt="' + esc(feat.title) + '">' : "") +
+    '<div class="veil"></div>' +
+    '<div class="hero-body">' +
+    '<div class="hero-pill-row">' +
+    '<span class="pill hot">🔥 Featured #' + (index + 1) + "</span>" +
+    '<span class="pill rating">★ ' + rating(feat.vote_average) + "</span>" +
+    '<span class="pill">' + year(feat.release_date || feat.first_air_date) + "</span>" +
+    '<span class="pill">Ultra HD</span>' +
+    "</div>" +
+    "<h1>" + esc(feat.title || feat.name) + "</h1>" +
+    "<p>" + esc(feat.overview || "Stream this blockbuster instantly on ReelRift with high-speed multi-server support.") + "</p>" +
+    '<div class="hero-actions">' +
+    '<button class="btn btn-primary" data-id="' + feat.id + '" data-type="' + (feat.media_type || "movie") + '">' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
+    " Watch Now" +
+    "</button>" +
+    '<button class="btn btn-secondary" id="heroTrailerBtn" data-id="' + feat.id + '" data-type="' + (feat.media_type || "movie") + '" data-title="' + esc(feat.title || feat.name) + '">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
+    " Trailer" +
+    "</button>" +
+    '<button class="btn btn-secondary' + (isBookmarked ? " active" : "") + '" id="heroBookmarkBtn" data-id="' + feat.id + '" data-type="' + (feat.media_type || "movie") + '">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
+    (isBookmarked ? " In My List" : " Add to List") +
+    "</button>" +
+    "</div>" +
+    "</div>" +
+    '<div class="hero-indicators" id="heroIndicators">' + dots + "</div>" +
+    "</section>"
+  );
+}
+
 async function renderHome(selectedGenre = "") {
   app.innerHTML = '<div class="hero skeleton" style="min-height:500px"></div>' + sectionHTML("Featured Titles", skeletons(12));
 
@@ -371,71 +517,91 @@ async function renderHome(selectedGenre = "") {
       tmdb("/tv/popular", { page: 1 }),
     ]);
 
-    const trending = (trendRes.results || []).filter((x) => x.backdrop_path);
-    const feat = trending.length ? trending[Math.floor(Math.random() * Math.min(6, trending.length))] : (popRes.results || [])[0];
+    heroItems = (trendRes.results || []).filter((x) => x.backdrop_path).slice(0, 5);
+    if (!heroItems.length) heroItems = (popRes.results || []).slice(0, 5);
+    heroIndex = 0;
+
+    const history = getHistory();
+    const watchlist = getWatchlist();
 
     let html = "";
 
-    // 1. Hero Showcase
-    if (feat) {
-      const isBookmarked = isInWatchlist("movie", feat.id);
-      html +=
-        '<section class="hero fade">' +
-        (feat.backdrop_path ? '<img class="bd" src="' + IMG_BD + feat.backdrop_path + '" alt="' + esc(feat.title) + '">' : "") +
-        '<div class="veil"></div>' +
-        '<div class="hero-body">' +
-        '<div class="hero-pill-row">' +
-        '<span class="pill hot">🔥 Trending #1</span>' +
-        '<span class="pill rating">★ ' + rating(feat.vote_average) + "</span>" +
-        '<span class="pill">' + year(feat.release_date) + "</span>" +
-        '<span class="pill">Ultra HD</span>' +
-        "</div>" +
-        "<h1>" + esc(feat.title || feat.name) + "</h1>" +
-        "<p>" + esc(feat.overview || "Stream this blockbuster movie instantly on ReelRift with high-speed multi-server support.") + "</p>" +
-        '<div class="hero-actions">' +
-        '<button class="btn btn-primary" data-id="' + feat.id + '" data-type="movie">' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
-        " Watch Now" +
-        "</button>" +
-        '<button class="btn btn-secondary' + (isBookmarked ? " active" : "") + '" id="heroBookmarkBtn" data-id="' + feat.id + '" data-type="movie">' +
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
-        (isBookmarked ? " In My List" : " Add to List") +
-        "</button>" +
-        "</div>" +
-        "</div></section>";
+    // 1. Interactive Hero Carousel
+    if (heroItems.length) {
+      html += buildHeroHTML(heroItems[0], 0, heroItems.length);
     }
 
     // 2. Genre Filter Bar
     html += genreBarHTML(selectedGenre);
 
-    // 3. User's Watchlist Preview (if any)
-    const watchlist = getWatchlist();
-    if (watchlist.length > 0) {
-      html += sectionHTML("My Watchlist (" + watchlist.length + ")", gridHTML(watchlist.slice(0, 6), "movie"), {
+    // 3. Continue Watching (if history exists)
+    if (history.length > 0 && !selectedGenre) {
+      html += scrollRowHTML("continueWatchingRow", "▶ Continue Watching", history, "movie");
+    }
+
+    // 4. Trending This Week (Smooth Horizontal Cinema Scroller)
+    html += scrollRowHTML("trendingWeekRow", "🔥 Trending This Week", (trendRes.results || []).slice(0, 16), "movie");
+
+    // 5. Popular Blockbusters
+    html += sectionHTML(selectedGenre ? "Filtered Movies" : "🎬 Popular Movies", gridHTML((popRes.results || []).slice(0, 12), "movie"));
+
+    // 6. Popular TV Series Row
+    html += scrollRowHTML("tvSeriesRow", "📺 Popular TV Series", (tvRes.results || []).slice(0, 16), "tv");
+
+    // 7. Top Rated Masterpieces
+    html += sectionHTML("⭐ Top Rated Masterpieces", gridHTML((topRes.results || []).slice(0, 12), "movie"));
+
+    // 8. Watchlist Preview
+    if (watchlist.length > 0 && !selectedGenre) {
+      html += sectionHTML("📌 My Saved Watchlist (" + watchlist.length + ")", gridHTML(watchlist.slice(0, 6), "movie"), {
         url: "#/watchlist",
         label: "View All",
       });
     }
 
-    // 4. Trending & Popular Sections
-    html += sectionHTML(selectedGenre ? "Filtered Movies" : "Trending Blockbusters", gridHTML((popRes.results || []).slice(0, 14), "movie"));
-    html += sectionHTML("Top Rated Masterpieces", gridHTML((topRes.results || []).slice(0, 14), "movie"));
-    html += sectionHTML("Popular TV Series", gridHTML((tvRes.results || []).slice(0, 14), "tv"));
-
-    // 5. Features & FAQ
+    // 9. Features & FAQ
     html += aboutFeaturesHTML();
     html += faqHTML();
 
     app.innerHTML = html;
 
-    // Wire hero bookmark button
-    const heroBm = document.getElementById("heroBookmarkBtn");
-    if (heroBm && feat) {
-      heroBm.addEventListener("click", () => {
-        const active = toggleWatchlist(feat, "movie");
-        heroBm.innerHTML =
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (active ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
-          (active ? " In My List" : " Add to List");
+    // Hero interaction helpers
+    function wireHeroEvents() {
+      const heroBm = document.getElementById("heroBookmarkBtn");
+      const feat = heroItems[heroIndex];
+      if (heroBm && feat) {
+        heroBm.onclick = () => {
+          const active = toggleWatchlist(feat, feat.media_type || "movie");
+          heroBm.innerHTML =
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (active ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
+            (active ? " In My List" : " Add to List");
+        };
+      }
+      const trailerBtn = document.getElementById("heroTrailerBtn");
+      if (trailerBtn && feat) {
+        trailerBtn.onclick = () => {
+          watchTrailer(feat.media_type || "movie", feat.id, feat.title || feat.name);
+        };
+      }
+    }
+
+    wireHeroEvents();
+
+    // Wire Hero Dot Indicators
+    const indicators = document.getElementById("heroIndicators");
+    if (indicators) {
+      indicators.addEventListener("click", (e) => {
+        const dot = e.target.closest(".hero-dot");
+        if (!dot) return;
+        const idx = Number(dot.dataset.heroIdx);
+        if (!isNaN(idx) && heroItems[idx]) {
+          heroIndex = idx;
+          const banner = document.getElementById("heroBanner");
+          if (banner) {
+            banner.outerHTML = buildHeroHTML(heroItems[idx], idx, heroItems.length);
+            wireHeroEvents();
+          }
+        }
       });
     }
 
@@ -559,10 +725,11 @@ function playerHTML(title, backdropUrl) {
     "</div>" +
     '<div class="servers-wrap" id="serverBtns"></div>' +
     '<div class="watch-actions-bar">' +
+    '<button class="btn btn-sm" id="watchTrailerBtn" title="Watch Official Trailer"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Trailer</button>' +
     '<button class="btn btn-sm" id="reloadServerBtn" title="Reload Video"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Reload</button>' +
     '<button class="btn btn-sm" id="theaterModeBtn" title="Expand Player Width"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Theater</button>' +
     '<button class="btn btn-sm" id="reportStreamBtn" title="Report playback issue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Report</button>' +
-    '<button class="btn btn-sm" id="shareBtn" title="Copy link to clipboard"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Share</button>' +
+    '<button class="btn btn-sm" id="shareBtn" title="Share title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Share</button>' +
     "</div>" +
     "</div>" +
     "</div>"
@@ -642,10 +809,25 @@ function mountServers() {
     };
   }
 
+  const trailerBtn = document.getElementById("watchTrailerBtn");
+  if (trailerBtn) {
+    trailerBtn.onclick = () => {
+      const title = (current && current.data && (current.data.title || current.data.name)) || "";
+      watchTrailer(current.type, current.id, title);
+    };
+  }
+
   const shareBtn = document.getElementById("shareBtn");
   if (shareBtn) {
     shareBtn.onclick = () => {
-      if (navigator.clipboard) {
+      const title = (current && current.data && (current.data.title || current.data.name)) || "ReelRift";
+      if (navigator.share) {
+        navigator.share({
+          title: title + " — ReelRift",
+          text: "Stream " + title + " in HD on ReelRift with multi-server streaming!",
+          url: location.href,
+        }).catch(() => {});
+      } else if (navigator.clipboard) {
         navigator.clipboard.writeText(location.href);
         showToast("Stream link copied to clipboard!");
       }
@@ -713,6 +895,7 @@ async function renderMovie(id) {
   try {
     const d = await tmdb("/movie/" + id, {});
     current = { type: "movie", id: d.id, season: 1, episode: 1, data: d };
+    saveHistory(d, "movie");
 
     const genres = (d.genres || []).map((g) => '<span class="pill">' + esc(g.name) + "</span>").join("") || '<span class="pill">Cinema</span>';
     const isBookmarked = isInWatchlist("movie", d.id);
@@ -776,6 +959,7 @@ async function renderTV(id, season, episode) {
     const sNum = Number(season) || list[0].season_number;
     const eNum = Number(episode) || 1;
     current = { type: "tv", id: d.id, season: sNum, episode: eNum, data: d };
+    saveHistory(d, "tv", sNum, eNum);
 
     const genres = (d.genres || []).map((g) => '<span class="pill">' + esc(g.name) + "</span>").join("") || '<span class="pill">Series</span>';
     const isBookmarked = isInWatchlist("tv", d.id);
