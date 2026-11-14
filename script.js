@@ -212,7 +212,7 @@ function posterHTML(path, title) {
   if (!path) {
     return '<div class="noimg"><span>No Poster<br><b>' + esc(title) + "</b></span></div>";
   }
-  return '<img loading="lazy" src="' + IMG + path + '" alt="' + esc(title) + ' poster" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 450%22><rect fill=%22%2312121c%22 width=%22300%22 height=%22450%22/><text fill=%22%238b8b9f%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22>No Poster</text></svg>\'">';
+  return '<img loading="lazy" decoding="async" src="' + IMG + path + '" alt="' + esc(title) + ' poster" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 450%22><rect fill=%22%2312121c%22 width=%22300%22 height=%22450%22/><text fill=%22%238b8b9f%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22>No Poster</text></svg>\'">';
 }
 
 function cardHTML(item, type) {

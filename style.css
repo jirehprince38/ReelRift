@@ -41,7 +41,6 @@
 html, body {
   background-color: var(--bg);
   color: var(--text);
-  scroll-behavior: smooth;
 }
 
 body {
@@ -50,11 +49,23 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-image: 
-    radial-gradient(1400px 700px at 85% -15%, rgba(229, 9, 20, 0.16), transparent 70%),
-    radial-gradient(1000px 600px at 15% 40%, rgba(255, 42, 59, 0.05), transparent 60%);
-  background-attachment: fixed;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* GPU-Accelerated Background Light (Zero Scroll Repaint Lag) */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 600px;
+  background: radial-gradient(1100px 500px at 80% -50px, rgba(229, 9, 20, 0.14), transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Scrollbar Styling */
@@ -101,12 +112,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  background: rgba(7, 7, 10, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(7, 7, 10, 0.94);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
-  transition: background 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .header-inner {
@@ -457,9 +469,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
   color: var(--text-secondary);
 }
 .pill.hot {
@@ -587,17 +598,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--line);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 180px 290px;
+  transform: translateZ(0);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
 .card:hover {
-  transform: translateY(-8px) scale(1.02);
+  transform: translateY(-6px);
   border-color: rgba(229, 9, 20, 0.65);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), var(--glow-subtle);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), var(--glow-subtle);
   z-index: 5;
 }
 .poster {
@@ -610,11 +623,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease, filter 0.3s ease;
+  transition: transform 0.3s ease;
 }
 .card:hover .poster img {
-  transform: scale(1.06);
-  filter: contrast(1.04) brightness(0.9);
+  transform: scale(1.04);
 }
 .poster .noimg {
   display: flex;
@@ -629,14 +641,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
 }
 
-/* Floating Card Badges */
+/* Floating Card Badges (Optimized Solid High Contrast, No Blur Overhead) */
 .card-badge {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(7, 7, 10, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(14, 14, 22, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 11.5px;
@@ -654,23 +665,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
   right: auto;
   color: #fff;
   font-size: 10px;
-  background: rgba(229, 9, 20, 0.8);
-  border-color: rgba(229, 9, 20, 0.6);
+  background: var(--brand);
+  border-color: rgba(255, 255, 255, 0.2);
   letter-spacing: 0.05em;
 }
 
-/* Hover Quick Actions Overlay */
+/* Hover Quick Actions Overlay (Fast GPU opacity, No Backdrop-Filter Lag) */
 .card-hover-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(7, 7, 10, 0.65);
-  backdrop-filter: blur(3px);
+  background: rgba(7, 7, 10, 0.72);
   opacity: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s ease;
   z-index: 3;
 }
 .card:hover .card-hover-overlay {
@@ -698,8 +708,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
+  background: rgba(22, 22, 32, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
   display: flex;
@@ -759,10 +768,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .player-ambient-glow {
   position: absolute;
-  inset: -20px;
+  inset: -10px;
   background-size: cover;
   background-position: center;
-  filter: blur(60px) opacity(0.35);
+  filter: blur(24px) opacity(0.3);
+  transform: translateZ(0);
   z-index: 0;
   pointer-events: none;
 }
