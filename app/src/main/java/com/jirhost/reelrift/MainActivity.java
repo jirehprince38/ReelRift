@@ -1,15 +1,17 @@
+
 package com.jirhost.reelrift;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Message;
+import android.os.SystemClock;
 import android.view.View;
-import android.view.Window;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -18,6 +20,7 @@ public class MainActivity extends Activity {
     private View customView;
     private FrameLayout fullScreenContainer;
     private WebChromeClient.CustomViewCallback customViewCallback;
+    private long lastBackPressed = 0;
 
     private void configureWebView(WebView view) {
         WebSettings settings = view.getSettings();
@@ -55,11 +58,15 @@ public class MainActivity extends Activity {
             @Override
             public void onHideCustomView() {
                 if (customView == null) return;
-                if (fullScreenContainer != null) fullScreenContainer.removeView(customView);
+                if (fullScreenContainer != null) {
+                    fullScreenContainer.removeView(customView);
+                }
                 customView = null;
                 fullScreenContainer = null;
                 setContentView(root);
-                if (customViewCallback != null) customViewCallback.onCustomViewHidden();
+                if (customViewCallback != null) {
+                    customViewCallback.onCustomViewHidden();
+                }
                 customViewCallback = null;
             }
 
@@ -67,15 +74,17 @@ public class MainActivity extends Activity {
             public boolean onCreateWindow(WebView view, boolean isDialog,
                     boolean isUserGesture, Message resultMsg) {
                 if (popupWebView != null) {
-                    popupWebView.destroy();
-                    root.removeView(popupWebView);
+                    closePopup();
                 }
+
                 popupWebView = new WebView(MainActivity.this);
                 configureWebView(popupWebView);
                 popupWebView.setWebChromeClient(createPopupChromeClient());
+
                 root.addView(popupWebView, new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT));
+
                 WebView.WebViewTransport transport =
                         (WebView.WebViewTransport) resultMsg.obj;
                 transport.setWebView(popupWebView);
@@ -100,7 +109,7 @@ public class MainActivity extends Activity {
         popupWebView.stopLoading();
         popupWebView.destroy();
         popupWebView = null;
-        webView.onResume();
+        if (webView != null) webView.onResume();
     }
 
     @Override
@@ -111,9 +120,11 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         configureWebView(webView);
         webView.setWebChromeClient(createChromeClient(webView));
+
         root.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
+
         setContentView(root);
         webView.loadUrl("https://reelrift-lake.vercel.app/");
     }
@@ -121,15 +132,27 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (customView != null) {
-            if (customViewCallback != null) customViewCallback.onCustomViewHidden();
+            if (customViewCallback != null) {
+                customViewCallback.onCustomViewHidden();
+            }
             customView = null;
+            fullScreenContainer = null;
             setContentView(root);
         } else if (popupWebView != null) {
             closePopup();
         } else if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            long currentTime = SystemClock.elapsedRealtime();
+
+            if (currentTime - lastBackPressed < 2000) {
+                super.onBackPressed();
+            } else {
+                lastBackPressed = currentTime;
+                Toast.makeText(this,
+                        "Press Back again to exit ReelRift",
+                        Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -159,4 +182,5 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-}
+                    }
+            
