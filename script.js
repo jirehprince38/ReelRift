@@ -193,14 +193,34 @@ function buildServers(type, id, season, episode) {
   const saved = loadOverrides()[key] || {};
   const t = TEMPLATES[type];
   const values = { id: id, season: season || 1, episode: episode || 1 };
-  const labels = ["Server 1 (HD)", "Server 2 (Fast)", "Server 3 (Multi)"];
+  const labels = ["Server 1 (HD)", "Server 2 (Fast)", "Server 3 (ReelRift)"];
 
   return [1, 2, 3].map(function (n, idx) {
     const k = "server" + n;
     const custom = (saved[k] || "").trim();
+    let url = custom || fillTemplate(t[k], values);
+
+    // Server 3 can use ReelRift's own HTML5 player when an authorized
+    // direct MP4, WebM, Ogg, or HLS URL is entered in the admin panel.
+    if (n === 3) {
+      if (!custom) {
+        url = new URL("/player.html", location.origin).toString();
+      } else {
+        try {
+          const mediaUrl = new URL(custom);
+          const isDirectMedia = /\.(mp4|m4v|webm|ogv|ogg|m3u8)$/i.test(mediaUrl.pathname);
+          if (isDirectMedia && (mediaUrl.protocol === "https:" || mediaUrl.protocol === "http:")) {
+            const playerUrl = new URL("/player.html", location.origin);
+            playerUrl.searchParams.set("src", mediaUrl.toString());
+            url = playerUrl.toString();
+          }
+        } catch (e) {}
+      }
+    }
+
     return {
       label: labels[idx] || "Server " + n,
-      url: custom || fillTemplate(t[k], values),
+      url: url,
       custom: !!custom,
     };
   });
