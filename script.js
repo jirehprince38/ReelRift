@@ -314,16 +314,18 @@ function posterHTML(path, title) {
   return '<img loading="lazy" decoding="async" src="' + IMG + path + '" alt="' + esc(title) + ' poster" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 450%22><rect fill=%22%2312121c%22 width=%22300%22 height=%22450%22/><text fill=%22%238b8b9f%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22>No Poster</text></svg>\'">';
 }
 
-function cardHTML(item, type) {
+function cardHTML(item, type, rank = null) {
   const title = item.title || item.name || "Untitled";
   const date = item.release_date || item.first_air_date || "";
   const isBookmarked = isInWatchlist(type, item.id);
   const isHistory = !!item.timestamp;
+  const matchScore = Math.min(99, Math.max(76, Math.round((item.vote_average || 7) * 10)));
 
   return (
-    '<article class="card fade" data-id="' + item.id + '" data-type="' + type + '"' +
+    '<article class="card fade' + (rank ? ' ranked' : '') + '" data-id="' + item.id + '" data-type="' + type + '"' +
     (item.season ? ' data-season="' + item.season + '"' : "") +
     (item.episode ? ' data-episode="' + item.episode + '"' : "") + '>' +
+    (rank ? '<span class="card-rank">' + rank + '</span>' : '') +
     '<div class="poster">' +
     posterHTML(item.poster_path, title) +
     '<span class="card-badge rating">★ ' + rating(item.vote_average) + "</span>" +
@@ -331,6 +333,9 @@ function cardHTML(item, type) {
     '<div class="card-hover-overlay">' +
     '<button class="quick-play-btn" title="Watch Now" aria-label="Watch Now">' +
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
+    "</button>" +
+    '<button class="quick-trailer-btn" title="Trailer Preview" data-action="trailer" aria-label="Watch Trailer">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' +
     "</button>" +
     '<button class="quick-bookmark-btn' + (isBookmarked ? " active" : "") + '" title="' + (isBookmarked ? "Remove from List" : "Add to List") + '" data-action="bookmark" aria-label="Save to list">' +
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>' +
@@ -341,6 +346,7 @@ function cardHTML(item, type) {
     '<div class="card-body">' +
     '<h3 title="' + esc(title) + '">' + esc(title) + "</h3>" +
     "<small>" +
+    '<span class="match-badge">' + matchScore + '% Match</span> • ' +
     (item.season && item.episode ? "S" + item.season + " E" + item.episode + " • " : (type === "movie" ? "Movie" : "Series") + " • ") +
     year(date) +
     "</small>" +
@@ -348,17 +354,17 @@ function cardHTML(item, type) {
   );
 }
 
-function scrollRowHTML(rowId, title, items, type) {
+function scrollRowHTML(rowId, title, items, type, isRanked = false) {
   if (!items || !items.length) return "";
   return (
-    '<section class="section">' +
+    '<section class="section' + (isRanked ? ' ranked-section' : '') + '">' +
     '<div class="section-head">' +
     '<h2 class="section-title">' + esc(title) + "</h2>" +
     "</div>" +
     '<div class="row-container">' +
     '<button class="row-arrow left" aria-label="Scroll left" onclick="document.getElementById(\'' + rowId + '\').scrollBy({left:-420,behavior:\'smooth\'})">&lsaquo;</button>' +
-    '<div class="row-scroller" id="' + rowId + '">' +
-    items.map((i) => cardHTML(i, type)).join("") +
+    '<div class="row-scroller' + (isRanked ? ' ranked-scroller' : '') + '" id="' + rowId + '">' +
+    items.map((i, idx) => cardHTML(i, type, isRanked ? idx + 1 : null)).join("") +
     "</div>" +
     '<button class="row-arrow right" aria-label="Scroll right" onclick="document.getElementById(\'' + rowId + '\').scrollBy({left:420,behavior:\'smooth\'})">&rsaquo;</button>' +
     "</div></section>"
@@ -451,7 +457,17 @@ function faqHTML() {
 if (app) {
   app.addEventListener("click", function (e) {
     const bookmarkBtn = e.target.closest('[data-action="bookmark"]');
+    const trailerBtn = e.target.closest('[data-action="trailer"]');
     const card = e.target.closest("[data-id][data-type]");
+
+    if (trailerBtn && card) {
+      e.stopPropagation();
+      const type = card.dataset.type;
+      const id = card.dataset.id;
+      const title = card.querySelector("h3") ? card.querySelector("h3").innerText : "Untitled";
+      watchTrailer(type, id, title);
+      return;
+    }
 
     if (bookmarkBtn && card) {
       e.stopPropagation();
@@ -559,8 +575,8 @@ async function renderHome(selectedGenre = "") {
       html += scrollRowHTML("continueWatchingRow", "▶ Continue Watching", history, "movie");
     }
 
-    // 4. Trending This Week (Smooth Horizontal Cinema Scroller)
-    html += scrollRowHTML("trendingWeekRow", "🔥 Trending This Week", (trendRes.results || []).slice(0, 16), "movie");
+    // 4. Trending This Week (Top 10 Ranked Cinema Scroller)
+    html += scrollRowHTML("trendingWeekRow", "🔥 Top 10 Trending This Week", (trendRes.results || []).slice(0, 10), "movie", true);
 
     // 5. Popular Blockbusters
     html += sectionHTML(selectedGenre ? "Filtered Movies" : "🎬 Popular Movies", gridHTML((popRes.results || []).slice(0, 12), "movie"));
@@ -585,7 +601,23 @@ async function renderHome(selectedGenre = "") {
 
     app.innerHTML = html;
 
-    // Hero interaction helpers
+    // Hero interaction helpers with Autoplay Carousel & Pause-on-Hover
+    let heroAutoTimer = null;
+    function startHeroAutoplay() {
+      clearInterval(heroAutoTimer);
+      if (!heroItems || heroItems.length <= 1) return;
+      heroAutoTimer = setInterval(() => {
+        const currentBanner = document.getElementById("heroBanner");
+        if (!currentBanner || !document.contains(currentBanner)) {
+          clearInterval(heroAutoTimer);
+          return;
+        }
+        heroIndex = (heroIndex + 1) % heroItems.length;
+        currentBanner.outerHTML = buildHeroHTML(heroItems[heroIndex], heroIndex, heroItems.length);
+        wireHeroEvents();
+      }, 7000);
+    }
+
     function wireHeroEvents() {
       const heroBm = document.getElementById("heroBookmarkBtn");
       const feat = heroItems[heroIndex];
@@ -603,9 +635,15 @@ async function renderHome(selectedGenre = "") {
           watchTrailer(feat.media_type || "movie", feat.id, feat.title || feat.name);
         };
       }
+      const banner = document.getElementById("heroBanner");
+      if (banner) {
+        banner.onmouseenter = () => clearInterval(heroAutoTimer);
+        banner.onmouseleave = () => startHeroAutoplay();
+      }
     }
 
     wireHeroEvents();
+    startHeroAutoplay();
 
     // Wire Hero Dot Indicators
     const indicators = document.getElementById("heroIndicators");
@@ -620,6 +658,7 @@ async function renderHome(selectedGenre = "") {
           if (banner) {
             banner.outerHTML = buildHeroHTML(heroItems[idx], idx, heroItems.length);
             wireHeroEvents();
+            startHeroAutoplay();
           }
         }
       });
@@ -746,6 +785,7 @@ function playerHTML(title, backdropUrl) {
     '<div class="servers-wrap" id="serverBtns"></div>' +
     '<div class="watch-actions-bar">' +
     '<button class="btn btn-sm" id="watchTrailerBtn" title="Watch Official Trailer"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Trailer</button>' +
+    '<button class="btn btn-sm" id="dimLightsBtn" title="Cinema Mode (Dim Lights)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg> Lights</button>' +
     '<button class="btn btn-sm" id="reloadServerBtn" title="Reload Video"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Reload</button>' +
     '<button class="btn btn-sm" id="theaterModeBtn" title="Expand Player Width"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg> Theater</button>' +
     '<button class="btn btn-sm" id="reportStreamBtn" title="Report playback issue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg> Report</button>' +
@@ -826,6 +866,15 @@ function mountServers() {
         container.style.maxWidth = container.style.maxWidth === "100%" ? "1240px" : "100%";
         theaterBtn.classList.toggle("active");
       }
+    };
+  }
+
+  const dimBtn = document.getElementById("dimLightsBtn");
+  if (dimBtn) {
+    dimBtn.onclick = () => {
+      const isDimmed = document.body.classList.toggle("cinema-dimmed");
+      dimBtn.classList.toggle("active", isDimmed);
+      showToast(isDimmed ? "Cinema lights dimmed" : "Cinema lights restored");
     };
   }
 
@@ -1346,6 +1395,14 @@ document.querySelectorAll("[data-nav]").forEach(function (el) {
     location.hash = n === "home" ? "#/" : n === "movies" ? "#/movies" : n === "tv" ? "#/tv" : "#/watchlist";
   });
 });
+
+/* Header Scrolled State */
+window.addEventListener("scroll", () => {
+  const header = document.querySelector(".site-header");
+  if (header) {
+    header.classList.toggle("scrolled", window.scrollY > 20);
+  }
+}, { passive: true });
 
 /* Init */
 updateWatchlistBadge();
