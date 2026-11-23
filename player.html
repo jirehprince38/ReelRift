@@ -173,18 +173,19 @@ input[type=range]{accent-color:#ff5364;min-width:90px;flex:1}
   }
   function refreshCaptions(){
     const options=[{value:"-1",label:"Off"}];
+    let selected="-1";
     if(hls&&hls.subtitleTracks&&hls.subtitleTracks.length){
       hls.subtitleTracks.forEach(function(track,index){
         options.push({value:String(index),label:track.name||track.lang||("Track "+(index+1))});
       });
-      captions.value=String(hls.subtitleTrack>=0?hls.subtitleTrack:-1);
+      selected=String(hls.subtitleTrack>=0?hls.subtitleTrack:-1);
     }else{
       const tracks=Array.from(video.textTracks||[]);
       tracks.forEach(function(track,index){
         options.push({value:String(index),label:track.label||track.language||("Track "+(index+1))});
       });
       const active=tracks.findIndex(function(track){return track.mode==="showing";});
-      captions.value=String(active>=0?active:-1);
+      selected=String(active>=0?active:-1);
     }
     captions.innerHTML="";
     options.forEach(function(item){
@@ -194,7 +195,7 @@ input[type=range]{accent-color:#ff5364;min-width:90px;flex:1}
       captions.appendChild(option);
     });
     captionsWrap.hidden=options.length<2;
-    if(captions.value!==String(options.some(function(item){return item.value===captions.value})?captions.value:-1))captions.value="-1";
+    captions.value=options.some(function(item){return item.value===selected;})?selected:"-1";
   }
 
   if(!source){
