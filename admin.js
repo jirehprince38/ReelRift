@@ -322,6 +322,9 @@
     const status = $("aStatus").value;
     const bad = Object.keys(vals).filter((k) => vals[k] && !/^https?:\/\//i.test(vals[k]));
     if (bad.length) return flagErr("Server URLs must start with http:// or https://");
+    if (vals.server3 && !/^https:\/\//i.test(vals.server3)) {
+      return flagErr("Server 3 requires an HTTPS direct media URL.");
+    }
     if (status === "available" && !vals.server1 && !vals.server2 && !vals.server3) {
       return flagErr("Enter at least one server URL, or use “Fill with templates”.");
     }
