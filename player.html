@@ -143,6 +143,7 @@ input[type=range]{accent-color:#ff5364;min-width:90px;flex:1}
     return null;
   }
   function updateTime(){
+    if(failed)return;
     const range=seekWindow();
     current.textContent=formatTime(range?Math.max(0,video.currentTime-range.start):video.currentTime);
     duration.textContent=Number.isFinite(video.duration)?formatTime(video.duration):(range?"LIVE":"0:00");
