@@ -7,82 +7,342 @@
 <title>ReelRift Player</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#08090d;color:#f7f7fb}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#08090d}
-body{display:grid;place-items:center;padding:18px}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#08090d}
+body{display:grid;place-items:center;min-height:100vh;padding:18px}
 .player{width:min(100%,1100px);border:1px solid #292a35;border-radius:18px;overflow:hidden;background:#101117;box-shadow:0 24px 80px #0009}
-.screen{position:relative;aspect-ratio:16/9;background:#050609;display:grid;place-items:center}
+.screen{position:relative;aspect-ratio:16/9;background:#050609;display:grid;place-items:center;min-height:0}
 video{display:block;width:100%;height:100%;object-fit:contain;background:#050609}
-.empty{position:absolute;inset:0;display:grid;place-items:center;padding:28px;text-align:center;background:radial-gradient(ellipse at 50% 30%,#24202a,#08090d 70%)}
-.empty[hidden]{display:none}.empty-inner{max-width:520px}.mark{font-weight:900;letter-spacing:.13em;color:#ff5364;font-size:12px}
-h1{font-size:clamp(20px,4vw,30px);margin:12px 0 8px}.desc{color:#a9aab8;line-height:1.6;font-size:14px;margin:0}
-.controls{display:flex;align-items:center;gap:12px;padding:14px 16px;flex-wrap:wrap}
-button{border:1px solid #353642;background:#1a1b24;color:#fff;border-radius:10px;padding:9px 13px;font-weight:700;cursor:pointer}
-button:hover{border-color:#ff5364}button:disabled{opacity:.45;cursor:not-allowed}
+.empty,.loading{position:absolute;inset:0;display:grid;place-items:center;padding:28px;text-align:center}
+.empty{z-index:2;background:radial-gradient(ellipse at 50% 30%,#24202a,#08090d 70%)}
+.empty[hidden],.loading[hidden],.select-wrap[hidden]{display:none}
+.empty-inner{max-width:520px}
+.mark{font-weight:900;letter-spacing:.13em;color:#ff5364;font-size:12px}
+h1{font-size:clamp(20px,4vw,30px);margin:12px 0 8px}
+.desc{color:#a9aab8;line-height:1.6;font-size:14px;margin:0}
+.loading{z-index:1;pointer-events:none;align-content:center;gap:12px;background:#05060955;color:#f4f4f8;font-size:13px}
+.spinner{width:34px;height:34px;border:3px solid #ffffff35;border-top-color:#ff5364;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.controls{display:flex;align-items:center;gap:10px;padding:14px 16px;flex-wrap:wrap}
+button,select{border:1px solid #353642;background:#1a1b24;color:#fff;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:700}
+button{cursor:pointer}
+button:hover,select:hover{border-color:#ff5364}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #ff5364;outline-offset:2px}
+button:disabled,input:disabled{opacity:.45;cursor:not-allowed}
 input[type=range]{accent-color:#ff5364;min-width:90px;flex:1}
 .time{font-size:12px;color:#b9bac6;font-variant-numeric:tabular-nums;white-space:nowrap}
-#volume{max-width:100px}.status{padding:0 16px 14px;color:#9899a8;font-size:12px}
-@media(max-width:520px){body{padding:0}.player{border-radius:0;border-left:0;border-right:0}.controls{gap:8px;padding:11px}.time{font-size:11px}button{padding:8px 10px}}
+#volume{max-width:100px;flex:0 1 90px}
+.select-wrap{display:flex;align-items:center;gap:6px;color:#a9aab8;font-size:11px;white-space:nowrap}
+.select-wrap select{max-width:120px;padding:8px 9px}
+.status{padding:0 16px 14px;color:#9899a8;font-size:12px;min-height:29px}
+.player:fullscreen{width:100vw;max-width:none;height:100vh;height:100dvh;border:0;border-radius:0;display:flex;flex-direction:column;background:#050609}
+.player:fullscreen .screen{flex:1;aspect-ratio:auto;min-height:0}
+.player:fullscreen .controls,.player:fullscreen .status{flex-shrink:0}
+@media(max-width:680px){
+ body{padding:0;min-height:100dvh}
+ .player{width:100%;border-radius:0;border-left:0;border-right:0}
+ .controls{gap:8px;padding:11px}
+ button,select{padding:8px 9px;font-size:12px}
+ .time{font-size:11px}
+ #seek{order:10;flex:1 1 100%;min-width:100%;margin:0}
+ #volume{max-width:78px}
+ .select-wrap select{max-width:100px}
+ .status{padding:0 12px 12px}
+}
+@media(prefers-reduced-motion:reduce){.spinner{animation:none}}
 </style>
 </head>
 <body>
-<main class="player">
-  <div class="screen">
-    <video id="video" playsinline preload="metadata"></video>
+<main class="player" id="player">
+  <div class="screen" id="screen">
+    <video id="video" playsinline webkit-playsinline preload="metadata"></video>
+    <div class="loading" id="loading" hidden aria-hidden="true"><span class="spinner"></span><span id="loadingText">Loading video…</span></div>
     <section class="empty" id="empty">
       <div class="empty-inner">
         <div class="mark">REELRIFT • SERVER 3</div>
         <h1>ReelRift Player</h1>
-        <p class="desc" id="message">This is your own HTML5 player. Add a direct video URL that you own or are authorized to stream in Admin → Server 3.</p>
+        <p class="desc" id="message">Add a direct HTTPS video URL that you own or are authorized to stream in Admin → Server 3.</p>
       </div>
     </section>
   </div>
-  <div class="controls">
+  <div class="controls" aria-label="Video controls">
     <button id="play" type="button" disabled>Play</button>
     <span class="time" id="current">0:00</span>
     <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek" disabled>
     <span class="time" id="duration">0:00</span>
     <button id="mute" type="button" disabled>Mute</button>
     <input id="volume" type="range" min="0" max="1" step=".05" value="1" aria-label="Volume" disabled>
+    <label class="select-wrap" id="qualityWrap" hidden>Quality
+      <select id="quality" aria-label="Video quality"><option value="-1">Auto</option></select>
+    </label>
+    <label class="select-wrap" id="captionsWrap" hidden>Subtitles
+      <select id="captions" aria-label="Subtitles"><option value="-1">Off</option></select>
+    </label>
     <button id="full" type="button" disabled>Fullscreen</button>
   </div>
-  <div class="status" id="status" role="status">Waiting for an authorized video source.</div>
+  <div class="status" id="status" role="status" aria-live="polite">Waiting for an authorized HTTPS video source.</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15/dist/hls.min.js"></script>
 <script>
 (function(){
-  const video=document.getElementById("video"), empty=document.getElementById("empty");
-  const message=document.getElementById("message"), status=document.getElementById("status");
-  const play=document.getElementById("play"), seek=document.getElementById("seek");
-  const current=document.getElementById("current"), duration=document.getElementById("duration");
-  const mute=document.getElementById("mute"), volume=document.getElementById("volume"), full=document.getElementById("full");
+  "use strict";
+  const player=document.getElementById("player");
+  const video=document.getElementById("video");
+  const empty=document.getElementById("empty");
+  const message=document.getElementById("message");
+  const loading=document.getElementById("loading");
+  const loadingText=document.getElementById("loadingText");
+  const status=document.getElementById("status");
+  const play=document.getElementById("play");
+  const seek=document.getElementById("seek");
+  const current=document.getElementById("current");
+  const duration=document.getElementById("duration");
+  const mute=document.getElementById("mute");
+  const volume=document.getElementById("volume");
+  const full=document.getElementById("full");
+  const qualityWrap=document.getElementById("qualityWrap");
+  const quality=document.getElementById("quality");
+  const captionsWrap=document.getElementById("captionsWrap");
+  const captions=document.getElementById("captions");
   const source=new URLSearchParams(location.search).get("src");
   let hls=null;
-  const time=v=>{if(!Number.isFinite(v))return "0:00";const m=Math.floor(v/60),s=Math.floor(v%60);return m+":"+(s<10?"0":"")+s};
-  function fail(text){empty.hidden=false;message.textContent=text;status.textContent=text}
-  if(!source){fail("No video source is configured yet. In the ReelRift admin panel, enter a direct MP4, WebM, Ogg, or M3U8 URL in the Server 3 field. Use only content you own or have permission to stream.");}
-  else {
-    let url;
-    try{url=new URL(source);if(!["https:","http:"].includes(url.protocol))throw new Error();}
-    catch(e){fail("Invalid video URL. Please use a valid HTTPS or HTTP media link.");return;}
-    const isHls=/\.m3u8$/i.test(url.pathname);
-    empty.hidden=true;
-    if(isHls && video.canPlayType("application/vnd.apple.mpegurl")) video.src=url.href;
-    else if(isHls && window.Hls && Hls.isSupported()){
-      hls=new Hls({enableWorker:true});hls.loadSource(url.href);hls.attachMedia(video);
-      hls.on(Hls.Events.ERROR,function(_,data){if(data.fatal){status.textContent="Unable to load this HLS stream. Check the source URL and CORS settings.";hls.destroy();}});
-    } else if(isHls){fail("This browser cannot play HLS. Try a supported browser or provide an MP4/WebM source.");}
-    else video.src=url.href;
-    video.addEventListener("error",()=>{status.textContent="Video could not be loaded. Check that the link is a direct media URL and allows cross-origin playback.";});
-    video.addEventListener("loadedmetadata",()=>{[play,seek,mute,volume,full].forEach(x=>x.disabled=false);duration.textContent=time(video.duration);status.textContent="Ready to play.";});
+  let networkRetries=0;
+  let mediaRecovered=false;
+  let failed=false;
+
+  function setStatus(text){status.textContent=text;}
+  function setLoading(active,text){
+    loading.hidden=!active;
+    if(text)loadingText.textContent=text;
   }
-  play.addEventListener("click",()=>video.paused?video.play().catch(()=>{status.textContent="Tap Play again to start playback.";}):video.pause());
-  video.addEventListener("play",()=>play.textContent="Pause");video.addEventListener("pause",()=>play.textContent="Play");
-  video.addEventListener("timeupdate",()=>{current.textContent=time(video.currentTime);if(Number.isFinite(video.duration)&&video.duration>0)seek.value=String(video.currentTime/video.duration*1000)});
-  seek.addEventListener("input",()=>{if(Number.isFinite(video.duration))video.currentTime=Number(seek.value)/1000*video.duration});
-  mute.addEventListener("click",()=>{video.muted=!video.muted;mute.textContent=video.muted?"Unmute":"Mute"});
-  volume.addEventListener("input",()=>{video.volume=Number(volume.value);video.muted=video.volume===0;mute.textContent=video.muted?"Unmute":"Mute"});
-  full.addEventListener("click",()=>{const target=document.querySelector(".screen");if(document.fullscreenElement)document.exitFullscreen?.();else target.requestFullscreen?.()});
-  window.addEventListener("pagehide",()=>{if(hls)hls.destroy()});
+  function setControlsEnabled(enabled){
+    [play,seek,mute,volume,full].forEach(function(control){control.disabled=!enabled;});
+  }
+  function fail(text){
+    failed=true;
+    setLoading(false);
+    empty.hidden=false;
+    message.textContent=text;
+    setStatus(text);
+    setControlsEnabled(false);
+    if(hls){hls.destroy();hls=null;}
+  }
+  function formatTime(value){
+    if(!Number.isFinite(value)||value<0)return "0:00";
+    const hours=Math.floor(value/3600);
+    const minutes=Math.floor((value%3600)/60);
+    const seconds=Math.floor(value%60);
+    return hours>0?hours+":"+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0"):minutes+":"+String(seconds).padStart(2,"0");
+  }
+  function seekWindow(){
+    if(video.seekable&&video.seekable.length){
+      const last=video.seekable.length-1;
+      return {start:video.seekable.start(last),end:video.seekable.end(last)};
+    }
+    if(Number.isFinite(video.duration)&&video.duration>0)return {start:0,end:video.duration};
+    return null;
+  }
+  function updateTime(){
+    if(failed)return;
+    const range=seekWindow();
+    current.textContent=formatTime(range?Math.max(0,video.currentTime-range.start):video.currentTime);
+    duration.textContent=Number.isFinite(video.duration)?formatTime(video.duration):(range?"LIVE":"0:00");
+    if(range&&range.end>range.start){
+      seek.disabled=false;
+      seek.value=String(Math.max(0,Math.min(1000,(video.currentTime-range.start)/(range.end-range.start)*1000)));
+    }else{
+      seek.disabled=true;
+      seek.value="0";
+    }
+  }
+  function refreshQuality(){
+    if(!hls||!hls.levels||hls.levels.length<2){
+      qualityWrap.hidden=true;
+      return;
+    }
+    const selected=hls.currentLevel;
+    quality.innerHTML='<option value="-1">Auto</option>';
+    hls.levels.forEach(function(level,index){
+      const label=level.height?level.height+"p":Math.round((level.bitrate||0)/1000)+" kbps";
+      const option=document.createElement("option");
+      option.value=String(index);
+      option.textContent=label;
+      quality.appendChild(option);
+    });
+    quality.value=String(selected<0?-1:selected);
+    qualityWrap.hidden=false;
+  }
+  function refreshCaptions(){
+    const options=[{value:"-1",label:"Off"}];
+    let selected="-1";
+    if(hls&&hls.subtitleTracks&&hls.subtitleTracks.length){
+      hls.subtitleTracks.forEach(function(track,index){
+        options.push({value:String(index),label:track.name||track.lang||("Track "+(index+1))});
+      });
+      selected=String(hls.subtitleTrack>=0?hls.subtitleTrack:-1);
+    }else{
+      const tracks=Array.from(video.textTracks||[]);
+      tracks.forEach(function(track,index){
+        options.push({value:String(index),label:track.label||track.language||("Track "+(index+1))});
+      });
+      const active=tracks.findIndex(function(track){return track.mode==="showing";});
+      selected=String(active>=0?active:-1);
+    }
+    captions.innerHTML="";
+    options.forEach(function(item){
+      const option=document.createElement("option");
+      option.value=item.value;
+      option.textContent=item.label;
+      captions.appendChild(option);
+    });
+    captionsWrap.hidden=options.length<2;
+    captions.value=options.some(function(item){return item.value===selected;})?selected:"-1";
+  }
+
+  if(!source){
+    fail("No video source is configured. Add a direct HTTPS MP4, WebM, Ogg, or M3U8 URL for content you own or are authorized to stream.");
+    return;
+  }
+
+  let url;
+  try{
+    url=new URL(source);
+    if(url.protocol!=="https:")throw new Error("HTTPS required");
+  }catch(error){
+    fail("Invalid video URL. Use a complete HTTPS media link; HTTP links are blocked for secure playback.");
+    return;
+  }
+
+  empty.hidden=true;
+  setLoading(true,"Loading video…");
+  setStatus("Connecting to video source…");
+
+  const isHls=/\.m3u8$/i.test(url.pathname);
+  if(isHls&&video.canPlayType("application/vnd.apple.mpegurl")){
+    video.src=url.href;
+  }else if(isHls&&window.Hls&&Hls.isSupported()){
+    hls=new Hls({enableWorker:true});
+    hls.attachMedia(video);
+    hls.loadSource(url.href);
+    hls.on(Hls.Events.MANIFEST_PARSED,function(){
+      refreshQuality();
+      refreshCaptions();
+      setStatus("Stream manifest loaded. Preparing playback…");
+    });
+    hls.on(Hls.Events.LEVELS_UPDATED,refreshQuality);
+    hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED,refreshCaptions);
+    hls.on(Hls.Events.ERROR,function(_,data){
+      if(!data.fatal){
+        if(data.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR)setStatus("Buffering…");
+        return;
+      }
+      if(data.type===Hls.ErrorTypes.NETWORK_ERROR&&networkRetries<2){
+        networkRetries++;
+        setLoading(true,"Reconnecting…");
+        setStatus("Network interrupted. Retrying ("+networkRetries+"/2)…");
+        hls.startLoad();
+        return;
+      }
+      if(data.type===Hls.ErrorTypes.MEDIA_ERROR&&!mediaRecovered){
+        mediaRecovered=true;
+        setLoading(true,"Recovering playback…");
+        setStatus("Recovering a media decoding issue…");
+        hls.recoverMediaError();
+        return;
+      }
+      fail("HLS playback failed. Check the HTTPS stream, playlist segments, and CORS access.");
+    });
+  }else if(isHls){
+    fail("This browser cannot play this HLS stream. Try a supported browser or provide an MP4/WebM source.");
+    return;
+  }else{
+    video.src=url.href;
+  }
+
+  video.addEventListener("loadedmetadata",function(){
+    setControlsEnabled(true);
+    updateTime();
+    refreshCaptions();
+    setStatus("Video ready. Press Play to start.");
+  });
+  video.addEventListener("durationchange",updateTime);
+  video.addEventListener("timeupdate",updateTime);
+  video.addEventListener("progress",updateTime);
+  video.addEventListener("canplay",function(){
+    setLoading(false);
+    if(!video.paused)setStatus("Playing.");
+    else setStatus("Ready to play.");
+  });
+  video.addEventListener("waiting",function(){
+    if(!failed){setLoading(true,"Buffering…");setStatus("Buffering…");}
+  });
+  video.addEventListener("stalled",function(){
+    if(!failed){setLoading(true,"Connection stalled…");setStatus("Connection stalled. Waiting for more data…");}
+  });
+  video.addEventListener("playing",function(){
+    setLoading(false);
+    setStatus("Playing.");
+    play.textContent="Pause";
+  });
+  video.addEventListener("pause",function(){
+    if(!failed&&video.readyState>0)setStatus("Paused.");
+    play.textContent="Play";
+  });
+  video.addEventListener("ended",function(){
+    setLoading(false);
+    setStatus("Playback finished.");
+    play.textContent="Play";
+  });
+  video.addEventListener("error",function(){
+    if(!failed)fail("Video could not be loaded. Confirm the direct HTTPS media URL and server access settings.");
+  });
+  video.textTracks&&video.textTracks.addEventListener&&video.textTracks.addEventListener("addtrack",refreshCaptions);
+
+  play.addEventListener("click",function(){
+    if(video.paused){
+      video.play().catch(function(){setStatus("Playback was blocked. Tap Play again to retry.");});
+    }else video.pause();
+  });
+  seek.addEventListener("input",function(){
+    const range=seekWindow();
+    if(range&&range.end>range.start)video.currentTime=range.start+(Number(seek.value)/1000)*(range.end-range.start);
+  });
+  mute.addEventListener("click",function(){video.muted=!video.muted;});
+  video.addEventListener("volumechange",function(){
+    mute.textContent=video.muted||video.volume===0?"Unmute":"Mute";
+    volume.value=String(video.muted?0:video.volume);
+  });
+  volume.addEventListener("input",function(){
+    video.volume=Number(volume.value);
+    video.muted=video.volume===0;
+  });
+  quality.addEventListener("change",function(){
+    if(hls)hls.currentLevel=Number(quality.value);
+  });
+  captions.addEventListener("change",function(){
+    const selected=Number(captions.value);
+    if(hls&&hls.subtitleTracks&&hls.subtitleTracks.length){
+      hls.subtitleTrack=selected;
+    }else{
+      Array.from(video.textTracks||[]).forEach(function(track,index){
+        track.mode=selected===index?"showing":"disabled";
+      });
+    }
+  });
+  full.addEventListener("click",async function(){
+    try{
+      if(document.fullscreenElement)await document.exitFullscreen();
+      else if(player.requestFullscreen)await player.requestFullscreen();
+      else if(video.webkitEnterFullscreen)video.webkitEnterFullscreen();
+      else setStatus("Fullscreen is not supported by this browser.");
+    }catch(error){
+      setStatus("Fullscreen could not start. Check the app's WebView fullscreen support.");
+    }
+  });
+  document.addEventListener("fullscreenchange",function(){
+    full.textContent=document.fullscreenElement?"Exit Fullscreen":"Fullscreen";
+  });
+  window.addEventListener("pagehide",function(){if(hls){hls.destroy();hls=null;}});
 })();
 </script>
 </body>
